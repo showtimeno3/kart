@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1d2b53">
+<title>공부 카트 레이스</title>
+<link rel="stylesheet" href="vendor/fonts/jua.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app"></div>
+<div id="speedlines"></div>
+
+<div id="hud" class="hidden">
+  <div id="tl">
+    <div id="rank-box"><span id="rank">5</span><span id="rank-of">/5</span></div>
+    <div id="lap">랩 1/2</div>
+    <canvas id="minimap" width="160" height="160"></canvas>
+  </div>
+  <div id="tr"><div id="time">0:00.0</div><button id="pause-btn" title="일시정지 (Esc)">⏸</button></div>
+
+  <div id="question" class="hidden">
+    <div id="q-tag">문제</div>
+    <div id="q-row"><span id="q-prompt"></span><button id="q-speak" class="hidden" title="다시 듣기">🔊</button></div>
+    <div id="q-choices"><div class="choice c0"></div><div class="choice c1"></div><div class="choice c2"></div></div>
+    <div id="q-dist"><div id="q-dist-fill"></div></div>
+  </div>
+
+  <div id="feedback"></div>
+  <div id="banner"></div>
+  <div id="wrongway" class="hidden">↩ 거꾸로 가고 있어요!</div>
+  <div id="tip" class="hidden"></div>
+  <div id="bl"><div class="label">드리프트</div><div id="gauge"><div id="gauge-fill"></div></div></div>
+  <div id="br"><div id="speed"><span id="speed-num">0</span><small>km/h</small></div><div id="item">-</div></div>
+  <div id="lights" class="hidden"><i></i><i></i><i></i></div>
+  <div id="countdown"></div>
+  <div id="intro" class="hidden"><div id="intro-name"></div><div id="intro-sub"></div><div class="skip">아무 키나 누르면 건너뛰기</div></div>
+</div>
+
+<div id="touch" class="hidden">
+  <div><button data-k="left">◀</button><button data-k="right">▶</button></div>
+  <div><button data-k="item">아이템</button><button data-k="drift">드리프트</button></div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="panel">
+    <div class="logo"><span class="l1">공부</span><span class="l2">카트 레이스</span></div>
+    <p class="sub">문제를 보고 <b>정답 문</b>으로 달려가면 부스터!</p>
+    <div class="group"><h2>캐릭터</h2>
+      <button class="opt" data-group="species" data-v="bear">🐻 곰</button>
+      <button class="opt" data-group="species" data-v="cat">🐱 고양이</button>
+      <button class="opt" data-group="species" data-v="rabbit">🐰 토끼</button>
+      <button class="opt" data-group="species" data-v="frog">🐸 개구리</button>
+      <button class="opt" data-group="species" data-v="penguin">🐧 펭귄</button>
+    </div>
+    <div class="group"><h2>과목</h2>
+      <button class="opt" data-group="subject" data-v="math">🔢 산수</button>
+      <button class="opt" data-group="subject" data-v="english">🔤 영어</button>
+    </div>
+    <div class="group"><h2>수준</h2>
+      <button class="opt" data-group="level" data-v="1">1~2학년</button>
+      <button class="opt" data-group="level" data-v="2">3~4학년</button>
+      <button class="opt" data-group="level" data-v="3">5~6학년</button>
+    </div>
+    <div class="group"><h2>트랙</h2>
+      <button class="opt" data-group="track" data-v="0">🌳 초원 서킷</button>
+      <button class="opt" data-group="track" data-v="1">🏜️ 사막 협곡</button>
+      <div id="best" class="best"></div>
+    </div>
+    <button id="start" class="big">출발!</button>
+    <div><button id="open-settings" class="small">⚙️ 설정</button></div>
+    <div class="help">방향키·WASD 운전 · <b>Shift</b> 꾹 누르고 꺾기 = 드리프트 · 공중에서 <b>Shift</b> = 트릭 · <b>Space</b> 아이템 · <b>Esc</b> 일시정지</div>
+  </div>
+</div>
+
+<div id="pause" class="overlay center hidden">
+  <div class="panel card">
+    <h1>일시정지</h1>
+    <button id="resume" class="big">계속하기</button>
+    <button id="restart" class="big alt">처음부터</button>
+    <button id="pause-settings" class="big alt">설정</button>
+    <button id="quit" class="big alt">메뉴로</button>
+  </div>
+</div>
+
+<div id="settings" class="overlay center hidden">
+  <div class="panel card">
+    <h1>설정</h1>
+    <label class="row">음악 <input id="vol-music" type="range" min="0" max="100"></label>
+    <label class="row">효과음 <input id="vol-sfx" type="range" min="0" max="100"></label>
+    <div class="group"><h2>그래픽</h2>
+      <button class="opt" data-group="quality" data-v="high">✨ 높음</button>
+      <button class="opt" data-group="quality" data-v="low">⚡ 빠르게</button>
+    </div>
+    <div class="group"><h2>컴퓨터 실력</h2>
+      <button class="opt" data-group="difficulty" data-v="0">😊 쉬움</button>
+      <button class="opt" data-group="difficulty" data-v="1">🙂 보통</button>
+      <button class="opt" data-group="difficulty" data-v="2">😤 어려움</button>
+    </div>
+    <button id="close-settings" class="big">확인</button>
+  </div>
+</div>
+
+<div id="loading" class="overlay center hidden"><div class="panel"><div class="spinner"></div><h1>트랙 준비 중...</h1></div></div>
+
+<div id="result" class="overlay hidden">
+  <div class="panel">
+    <h1 id="r-title"></h1>
+    <div id="r-stars"></div>
+    <div id="r-record"></div>
+    <div id="r-stats"></div>
+    <ol id="r-rank"></ol>
+    <div id="r-wrong"></div>
+    <div><button id="again" class="big">다시 달리기</button> <button id="to-menu" class="big alt">메뉴로</button></div>
+  </div>
+</div>
+
+<div id="boot-error" class="hidden">게임 파일을 불러오지 못했어요. 폴더 안의 vendor 폴더가 그대로 있는지 확인해 주세요.</div>
+
+<!-- 모두 이 폴더 안의 파일: 인터넷 없이도 실행됨 -->
+<script src="vendor/three-bundle.js"></script>
+<script src="js/questions.js"></script>
+<script src="js/trackgen.js"></script>
+<script src="js/models.js"></script>
+<script src="js/music.js"></script>
+<script src="js/game.js"></script>
+<script>if (!window.THREE) document.getElementById('boot-error').classList.remove('hidden');</script>
+</body>
+</html>
