@@ -239,6 +239,7 @@
       part(new THREE.TorusGeometry(0.3, 0.07, 4, 10), k, b, 0, 0, 0.1, { cast: false });
       for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.CircleGeometry(0.3, 10), wing); w.position.set(s * 0.3, 0.3, 0); w.rotation.set(-1.2, 0, s * 0.6); b.add(w); }
     }
+    g.scale.setScalar(2.4); // 멀리서도 보이게 크게
     return g;
   }
   function tornado() { // 위로 넓어지며 도는 바람 기둥

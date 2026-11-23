@@ -80,7 +80,7 @@ const Sound = (() => {
     bubble() { [700, 1100, 850, 1300, 950].forEach((f, i) => tone(f, 0.06, 'sine', 0.1, i * 0.07)); },
     star() { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.12, 'square', 0.07, i * 0.06)); },
     hint() { tone(1319, 0.15, 'sine', 0.16); tone(1760, 0.3, 'sine', 0.14, 0.1); },
-    buzz() { [0, 0.08, 0.16, 0.24].forEach((d) => tone(220 + d * 200, 0.12, 'sawtooth', 0.06, d, 40)); },
+    buzz() { for (let k = 0; k < 10; k++) tone(180 + (k % 3) * 40, 0.14, 'sawtooth', 0.11, k * 0.1, 30); }, // 1초 동안 크게 윙윙
     whoosh() { noise(0.7, 0.35, 600); tone(150, 0.6, 'sine', 0.08, 0, 250); },
     swish() { noise(0.3, 0.25, 2200); tone(700, 0.25, 'triangle', 0.08, 0, -300); },
     warn() { tone(1046, 0.08, 'square', 0.09); },

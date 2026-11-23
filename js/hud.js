@@ -46,7 +46,10 @@ function drawMinimap() {
     ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#1d2b53'; ctx.stroke();
   };
   for (const a of game.ais) dot(a.pos, '#' + a.color.toString(16).padStart(6, '0'), 5);
-  for (const s of game.shots) if (s.owner !== game.p) dot(s.mesh.position, '#ff3b30', 3); // 다른 카트가 던진 공격 아이템
+  for (const s of game.shots) {
+    if (s.kind === 'bee') dot(s.mesh.position, '#ffd84d', 6); // 벌떼는 크게 (누가 던졌든)
+    else if (s.owner !== game.p) dot(s.mesh.position, '#ff3b30', 3); // 다른 카트가 던진 공격 아이템
+  }
   dot(game.p.pos, '#ffffff', 7);
 }
 

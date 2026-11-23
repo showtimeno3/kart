@@ -5,11 +5,12 @@
 const SHOT = { // 종류별 속도(초당 거리), 수명(초), 맞혔을 때 문구
   balloon: { speed: 70, life: 4, msg: '풍덩! 🎈' },
   homing: { speed: 70, life: 6, msg: '풍덩! 🎯' },
-  bee: { speed: 110, life: 14, msg: '따끔! 🐝' }, // 멀리 앞선 1등도 따라잡게
+  bee: { speed: 110, life: Infinity, msg: '따끔! 🐝' }, // 제한 시간 없음: 1등을 끝까지 쫓아감
   tornado: { speed: 45, life: 6, msg: '빙글빙글! 🌀' },
   boomerang: { speed: 70, life: 4, msg: '딱! 🪃' },
 };
 const BOOMERANG_OUT = 1.5; // 부메랑이 앞으로 날아가는 시간(초), 그 뒤 돌아옴
+const BEE_ALT = 10, BEE_DIVE = 60, BEE_AREA = 10; // 벌떼: 날아가는 높이, 이 거리 안이면 1등에게 내리꽂음, 맞힐 때 1등 주변 범위
 
 // 1등 카트 (골인한 카트 제외). k 자신이 1등이면 null
 function leaderOf(k) {
@@ -29,10 +30,13 @@ function throwShot(kind, k, target, dir = 1) {
   game.scene.add(mesh);
   game.shots.push({ kind, mesh, owner: k, target, dir, s: kartProg(k) + (4 * dir) / T.segLen, sc, lat: k.lat, latV, age: 0,
     phase: 'out', hitSet: new Set(), gone: false });
-  if (me) {
+  if (kind === 'bee') { // 모두에게 알림: 큰 소리와 화면 가운데 글귀
+    Sound.sfx.buzz();
+    showBanner(`🐝 벌떼 출동! → ${target === game.p ? '나' : target ? target.name : '1등'}`, 2.2);
+  } else if (me) {
     const say = { homing: '따라가는 물풍선! 🎯', bee: '벌떼 출동! 🐝', tornado: '회오리! 🌀', boomerang: '부메랑! 🪃' }[kind] || (dir < 0 ? '뒤로 물풍선! 🎈' : '물풍선! 🎈');
     flash(say, 'info');
-    (kind === 'bee' ? Sound.sfx.buzz : kind === 'tornado' ? Sound.sfx.whoosh : kind === 'boomerang' ? Sound.sfx.swish : Sound.sfx.throw)();
+    (kind === 'tornado' ? Sound.sfx.whoosh : kind === 'boomerang' ? Sound.sfx.swish : Sound.sfx.throw)();
   }
 }
 
@@ -44,9 +48,10 @@ function shotHits(s, k, r = 2.8) {
 // 종류별로 맞히는 규칙. 맞히면 true, 한 대만 맞히는 종류는 s.gone 을 켬
 function shotTryHit(s, k) {
   if (k === s.owner) return false;
-  if (s.kind === 'bee') {
+  if (s.kind === 'bee') { // 1등에게 닿으면 주변까지 한꺼번에
     if (k !== s.target || !shotHits(s, k, 3)) return false;
-    s.gone = true;
+    beeStrike(s, allKarts());
+    return true;
   } else if (s.kind === 'tornado') {
     if (s.hitSet.has(k) || !shotHits(s, k, 5)) return false;
     s.hitSet.add(k); // 같은 카트는 한 번, 회오리는 계속 굴러감
@@ -90,7 +95,7 @@ function placeShot(s, dt) {
     s.lat += s.latV * dt;
     if (Math.abs(s.lat) > lim) { s.lat = Math.sign(s.lat) * lim; s.latV = -s.latV * 0.8; } // 벽에 튕김
   }
-  const hover = s.kind === 'tornado' ? 0 : 1.3 + Math.sin(s.age * 14) * 0.15;
+  const hover = s.kind === 'tornado' ? 0 : s.kind === 'bee' ? BEE_ALT + Math.sin(s.age * 5) * 0.8 : 1.3 + Math.sin(s.age * 14) * 0.15;
   if (s.sc) {
     s.mesh.position.lerpVectors(sc.pos[k0], sc.pos[k0 + 1], kf - k0).addScaledVector(sc.right[k0], s.lat);
     s.mesh.position.y = sc.pos[k0].y + hover;
@@ -120,14 +125,38 @@ function incomingThreat(k) {
   return best;
 }
 
+// 벌떼 명중: 1등과 그 주변 BEE_AREA 안의 카트를 모두 돌림 (각자 방패로 막음, 던진 사람 제외)
+function beeStrike(s, karts) {
+  const t = s.target;
+  for (const k of karts) {
+    if (k === s.owner || Math.hypot(k.pos.x - t.pos.x, k.pos.z - t.pos.z) > BEE_AREA || Math.abs(k.y - t.y) > 4) continue;
+    hitKart(k, 'spin', SHOT.bee.msg, true);
+  }
+  Particles.burst(s.mesh.position, 40, 0xffd84d, 12, { size: 0.9 });
+  s.gone = true;
+}
+// 벌떼: 상공에서 길을 따라 날아가다가 1등이 BEE_DIVE 안이면 곧장 내리꽂음 (점프·지름길이어도 맞음)
+function updateBee(s, dt) {
+  if (!s.target || s.target.finished) { s.target = leaderOf(s.owner); if (!s.target) { s.gone = true; return; } } // 1등이 골인하면 다음 1등
+  const t = s.target, p = s.mesh.position, dx = t.pos.x - p.x, dz = t.pos.z - p.z;
+  if (!s.dive && Math.hypot(dx, dz) < BEE_DIVE) s.dive = true;
+  if (s.dive) {
+    const dy = t.y + 1.3 - p.y, d = Math.hypot(dx, dy, dz), step = SHOT.bee.speed * 1.3 * dt;
+    if (d <= step + 2) { beeStrike(s, allKarts()); return; }
+    p.x += (dx / d) * step; p.y += (dy / d) * step; p.z += (dz / d) * step;
+    s.mesh.rotation.y = Math.atan2(dx, dz);
+  } else { moveShot(s, dt); placeShot(s, dt); }
+  Particles.emit(p, { color: Math.random() < 0.5 ? 0xffd84d : 0xffb300, vy: -1, life: 0.9, size: 1.4, grow: 1.5, add: true }); // 노란 꼬리
+}
+
 function updateShots(dt, karts) {
   const sh = game.shots;
   for (let n = sh.length - 1; n >= 0; n--) {
     const s = sh[n];
     s.age += dt;
     if (s.kind === 'boomerang' && s.phase === 'out' && s.age > BOOMERANG_OUT) { s.phase = 'back'; s.dir = -s.dir; }
-    if (s.kind === 'bee' && (!s.target || s.target.finished)) s.gone = true; // 쫓던 1등이 골인
-    if (!s.gone) {
+    if (s.kind === 'bee') updateBee(s, dt);
+    else if (!s.gone) {
       moveShot(s, dt);
       placeShot(s, dt);
       for (const k of karts) if (!s.gone) shotTryHit(s, k);

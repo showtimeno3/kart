@@ -9,7 +9,7 @@ const noop = () => {};
 const ctx = vm.createContext({
   console, Math, Set, Object, Array,
   N: 1600, HW: 20, EDGE: 25.2,
-  aiTotal: (a) => a.d, kartPoint: () => ({}), flash: noop, endDrift: noop,
+  aiTotal: (a) => a.d, kartPoint: () => ({}), flash: noop, endDrift: noop, showBanner: noop,
   clamp: (v, a, b) => Math.max(a, Math.min(b, v)), approach: (a, b) => b,
   Particles: { burst: noop, emit: noop }, Sound: { sfx: new Proxy({}, { get: () => noop }) },
   M: {}, ItemTable: { ITEMS: new Proxy({}, { get: () => ({ icon: '?' }) }) }, $: () => ({ classList: { toggle: noop } }),
@@ -198,5 +198,38 @@ function setup(...ais) {
   assert.ok(ctx.game.hazards[0].touched.has(k), '앞으로 던진 얼음 벽에 내가 맞음');
   ctx.dropHazard('ice', k, 0);
   assert.ok(!ctx.game.hazards[1].touched.has(k));
+}
+// 벌떼: 1등 주변 범위도 맞힘(던진 사람 제외), 공중에서 내리꽂아 점프 중인 1등도 맞힘, 제한 시간 없음
+{
+  const owner = kart({ d: 0, pos: { x: 0, z: 0 } }), lead = kart({ d: 900, pos: { x: 0, z: 0 } });
+  const near = kart({ d: 880, pos: { x: 6, z: 0 } }), far = kart({ d: 700, pos: { x: 30, z: 0 } });
+  setup(owner, lead, near, far);
+  const bee = { kind: 'bee', owner, target: lead, mesh: { position: { x: 0, y: 1.3, z: 0 } } };
+  ctx.beeStrike(bee, [owner, lead, near, far]);
+  assert.ok(lead.spin > 0 && near.spin > 0, '1등 주변 카트가 안 맞음');
+  assert.strictEqual(far.spin, 0); assert.strictEqual(owner.spin, 0, '던진 사람이 맞음');
+}
+{
+  const p3 = (x, y, z) => { const p = { x, y, z, lerpVectors() { return p; }, addScaledVector() { return p; }, clone() { return { x: p.x, y: p.y, z: p.z }; } }; return p; };
+  ctx.M.bees = () => ({ position: p3(0, 0, 0), rotation: { y: 0 } });
+  ctx.groundY = () => 0;
+  const owner = kart({ d: 0, pos: { x: 500, z: 500 } }), lead = kart({ d: 900, pos: { x: 0, z: 0 }, y: 8 }); // 1등은 점프 중(높이 8)
+  setup(owner, lead);
+  Object.assign(ctx.game, { shots: [], scene: { add: noop, remove: noop }, A: {}, T: { segLen: 1.7, sc: null, head: new Array(1600).fill(0), pos: new Array(1600).fill({}), right: new Array(1600).fill({}) } });
+  ctx.game.p.pos = { x: 900, z: 900, distanceTo: () => 999 };
+  ctx.throwShot('bee', owner, lead);
+  const s = ctx.game.shots[0];
+  Object.assign(s.mesh.position, { x: 40, y: 14, z: 0 }); // 40 거리 상공
+  for (let k = 0; k < 40 && !lead.spin; k++) ctx.updateShots(0.05, [owner, lead]);
+  assert.ok(lead.spin > 0, '공중의 1등에게 내리꽂지 못함');
+  // 멀리 있는 1등: 30초가 지나도 사라지지 않음 (가짜 도로라 다가가지는 못함)
+  const lead2 = kart({ d: 2000, pos: { x: 5000, z: 0 } });
+  setup(owner, lead2);
+  Object.assign(ctx.game, { shots: [], scene: { add: noop, remove: noop }, A: {}, T: ctx.game.T || {} });
+  ctx.game.T = { segLen: 1.7, sc: null, head: new Array(1600).fill(0), pos: new Array(1600).fill({}), right: new Array(1600).fill({}) };
+  ctx.game.p.pos = { x: 900, z: 900, distanceTo: () => 999 };
+  ctx.throwShot('bee', owner, lead2);
+  for (let k = 0; k < 600; k++) ctx.updateShots(0.05, [owner, lead2]);
+  assert.strictEqual(ctx.game.shots.length, 1, '벌떼가 시간 제한으로 사라짐');
 }
 console.log('items-hit: all tests passed');
