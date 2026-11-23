@@ -95,6 +95,7 @@ function useItem(back = false) {
 function useItemFor(k, back = false) {
   const id = k.items[0], me = k === game.p;
   if (!id) return;
+  if (id === 'bee' && !leaderOf(k)) { if (me) flash('앞에 아무도 없어요 🐝', 'info'); return; } // 내가 1등이면 벌떼는 그대로 들고 있음
   countUse(id, me);
   if (id === 'boost' || id === 'boost3') { k.boost = Math.max(k.boost, me ? 2 : 1.6); if (me) { flash('부스터! 🚀', 'info'); Sound.sfx.boost(); } }
   else if (id === 'banana' || id === 'honey') dropHazard(id, k);
@@ -102,6 +103,8 @@ function useItemFor(k, back = false) {
   else if (id === 'shield') { k.shield = 8; if (me) { flash('방패! 🛡️', 'info'); Sound.sfx.shield(); } }
   else if (id === 'balloon') throwShot('balloon', k, null, back ? -1 : 1);
   else if (id === 'homing') throwShot('homing', k, kartAhead(k)[0]);
+  else if (id === 'bee') throwShot('bee', k, leaderOf(k));
+  else if (id === 'tornado' || id === 'boomerang') throwShot(id, k, null);
   else if (id === 'magnet') { k.magnet = 3; if (me) { flash('자석! 🧲', 'info'); Sound.sfx.magnet(); } }
   else if (id === 'bubble') {
     for (const o of allKarts()) if (o !== k && kartProg(o) > kartProg(k)) hitKart(o, 'bubble');

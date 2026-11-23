@@ -81,6 +81,9 @@ const Sound = (() => {
     bubble() { [700, 1100, 850, 1300, 950].forEach((f, i) => tone(f, 0.06, 'sine', 0.1, i * 0.07)); },
     star() { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.12, 'square', 0.07, i * 0.06)); },
     hint() { tone(1319, 0.15, 'sine', 0.16); tone(1760, 0.3, 'sine', 0.14, 0.1); },
+    buzz() { [0, 0.08, 0.16, 0.24].forEach((d) => tone(220 + d * 200, 0.12, 'sawtooth', 0.06, d, 40)); },
+    whoosh() { noise(0.7, 0.35, 600); tone(150, 0.6, 'sine', 0.08, 0, 250); },
+    swish() { noise(0.3, 0.25, 2200); tone(700, 0.25, 'triangle', 0.08, 0, -300); },
     finish() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.3, 'triangle', 0.22, i * 0.12)); },
   };
   return {

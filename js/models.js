@@ -231,6 +231,29 @@
     for (let k = -1; k <= 1; k++) part(new THREE.BoxGeometry(1.9, 2.4 + (k === 0 ? 0.5 : 0), 1.3), m, g, k * 1.85, 1.2, 0, { outline: 1.04 });
     return g;
   }
+  function bees() { // 벌 다섯 마리 무리
+    const g = new THREE.Group(), y = toon(0xffd84d), k = toon(0x1b1b2f), wing = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+    for (let n = 0; n < 5; n++) {
+      const b = new THREE.Group(), a = (n / 5) * Math.PI * 2; b.position.set(Math.cos(a) * 1.1, (n % 2) * 0.5, Math.sin(a) * 1.1); g.add(b);
+      part(new THREE.SphereGeometry(0.35, 10, 8), y, b, 0, 0, 0, { s: [1, 0.9, 1.4], outline: 1.1 });
+      part(new THREE.TorusGeometry(0.3, 0.07, 4, 10), k, b, 0, 0, 0.1, { cast: false });
+      for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.CircleGeometry(0.3, 10), wing); w.position.set(s * 0.3, 0.3, 0); w.rotation.set(-1.2, 0, s * 0.6); b.add(w); }
+    }
+    return g;
+  }
+  function tornado() { // 위로 넓어지며 도는 바람 기둥
+    const g = new THREE.Group();
+    [[1.2, 3.2, 0], [2.0, 2.8, 2.6], [2.8, 2.4, 4.8]].forEach(([r, h, y], n) => {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.55, h, 14, 1, true), new THREE.MeshBasicMaterial({ color: [0xdfe9f5, 0xc9d8ea, 0xb4c7de][n], transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+      m.position.y = y + h / 2; g.add(m);
+    });
+    return g;
+  }
+  function boomerang() { // 나무 V 모양
+    const g = new THREE.Group(), wood = toon(0xc98b4b, { flatShading: true });
+    for (const s of [-1, 1]) part(new THREE.BoxGeometry(2.2, 0.25, 0.6), wood, g, s * 0.75, 0, 0.45, { ry: s * 0.6, outline: 1.08 });
+    return g;
+  }
   function shieldBubble() { // 방패: 카트를 감싸는 투명한 공
     return new THREE.Mesh(new THREE.SphereGeometry(2.6, 20, 14), new THREE.MeshBasicMaterial({ color: 0x7fd4ff, transparent: true, opacity: 0.28, depthWrite: false }));
   }
@@ -483,6 +506,6 @@
     });
   }
 
-  root.Models = { SPECIES, toon, part, makeKart, makeBanana, waterBalloon, honeyPuddle, iceWall, shieldBubble, snowPine, snowman, lighthouse, palm, parasol, crab, gull, tree, pine, bush, rock, cactus, mesa, cloud, mountain, grandstand, OUTLINE,
+  root.Models = { SPECIES, toon, part, makeKart, makeBanana, waterBalloon, honeyPuddle, iceWall, shieldBubble, bees, tornado, boomerang, snowPine, snowman, lighthouse, palm, parasol, crab, gull, tree, pine, bush, rock, cactus, mesa, cloud, mountain, grandstand, OUTLINE,
     sheep, boulder, windmill, balloon, ramp, instanceScatter, billboard };
 })(this);

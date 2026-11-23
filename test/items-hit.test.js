@@ -102,4 +102,48 @@ function setup(...ais) {
   assert.strictEqual(ctx.game.shots[1].dir, 1);
   assert.ok(ctx.game.shots[1].s > 500);
 }
+// 새 공격 아이템: 벌떼(1등만), 회오리(지나는 카트 모두, 한 번씩), 부메랑(가는 길·오는 길 각 한 대)
+{
+  const at = (x, z) => ({ x, y: 1.3, z });
+  const a = kart({ d: 100 }), b = kart({ d: 200, pos: { x: 0, z: 0 } }), c = kart({ d: 150, pos: { x: 1, z: 0 } });
+  setup(a, b, c);
+  assert.strictEqual(ctx.leaderOf(a), b, '1등을 못 찾음');
+  assert.strictEqual(ctx.leaderOf(b), null, '자기 자신을 1등으로 노림');
+  b.finished = true;
+  assert.strictEqual(ctx.leaderOf(a), c, '골인한 카트를 노림');
+  b.finished = false;
+  // 벌떼: 대상이 아니면 가까워도 안 맞음
+  const bee = { kind: 'bee', target: b, owner: a, mesh: { position: at(0, 0) } };
+  assert.strictEqual(ctx.shotTryHit(bee, c), false);
+  assert.strictEqual(ctx.shotTryHit(bee, b), true); assert.ok(bee.gone && b.spin > 0);
+  // 회오리: 두 카트 모두 돌리고 같은 카트는 한 번, 맞혀도 계속 감
+  b.spin = 0;
+  const tor = { kind: 'tornado', owner: a, hitSet: new Set(), mesh: { position: at(0, 0) } };
+  assert.strictEqual(ctx.shotTryHit(tor, b), true); assert.strictEqual(ctx.shotTryHit(tor, c), true);
+  b.spin = 0; assert.strictEqual(ctx.shotTryHit(tor, b), false, '회오리가 같은 카트를 두 번'); assert.ok(!tor.gone);
+  // 부메랑: 가는 길에 한 대, 오는 길에 한 대
+  b.spin = c.spin = 0;
+  const boo = { kind: 'boomerang', owner: a, phase: 'out', mesh: { position: at(0, 0) } };
+  assert.strictEqual(ctx.shotTryHit(boo, b), true); assert.strictEqual(ctx.shotTryHit(boo, c), false, '가는 길에 두 대');
+  boo.phase = 'back';
+  assert.strictEqual(ctx.shotTryHit(boo, c), true); assert.ok(!boo.gone);
+}
+// 수명: 부메랑은 4초, 대상이 골인한 벌떼는 바로 사라짐 (오류 없음)
+{
+  const pos = () => { const p = { x: 0, y: 0, z: 0, lerpVectors() { return p; }, addScaledVector() { return p; }, clone() { return { x: 0, y: 0, z: 0 }; } }; return p; };
+  const mesh = () => ({ position: pos(), rotation: { y: 0 } });
+  Object.assign(ctx.M, { waterBalloon: mesh, bees: mesh, tornado: mesh, boomerang: mesh });
+  ctx.groundY = () => 0;
+  const a = kart({ d: 100 }), b = kart({ d: 900, pos: { x: 500, z: 0 } });
+  setup(a, b);
+  Object.assign(ctx.game, { shots: [], scene: { add: noop, remove: noop }, A: {}, T: { segLen: 1.7, sc: null, head: new Array(1600).fill(0), pos: new Array(1600).fill({}), right: new Array(1600).fill({}) } });
+  ctx.game.p.pos = { x: 900, z: 900, distanceTo: () => 999 };
+  ctx.throwShot('boomerang', a, null, 1);
+  ctx.throwShot('bee', a, b, 1);
+  b.finished = true;
+  ctx.updateShots(0.1, [a, b]);
+  assert.ok(!ctx.game.shots.some((s) => s.kind === 'bee'), '골인한 대상을 쫓는 벌떼가 남음');
+  for (let k = 0; k < 45; k++) ctx.updateShots(0.1, [a, b]);
+  assert.strictEqual(ctx.game.shots.length, 0, '부메랑이 4초 넘게 남음');
+}
 console.log('items-hit: all tests passed');
