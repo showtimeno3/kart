@@ -29,9 +29,9 @@ assert.ok(!first.boomerang, '1등(첫 바퀴 아님)에게 부메랑');
 assert.ok(dist(1, { firstLap: true }).boomerang > 0, '첫 바퀴 1등이 2~3등 표를 안 씀');
 // 정답 콤보 3 이상이면 한 묶음 뒤 → 1등도 2~3등 표
 assert.ok(dist(1, { combo: 3 }).boomerang > 0, '콤보 3 의 1등이 2~3등 표를 안 씀');
-// 꼴찌에 바나나 없음, 벌떼는 뒤·꼴찌에서만
+// 꼴찌에 바나나 없음, 벌떼는 1등·2~3등에서는 안 나옴 (중간부터, 사용자 결정)
 assert.ok(!dist(8).banana);
-assert.ok(!dist(2).bee && !dist(4).bee && dist(6).bee > 0 && dist(8).bee > 0);
+assert.ok(!dist(2).bee && dist(4).bee > 0 && dist(6).bee > 0 && dist(8).bee > 0);
 // 15종 모두 어딘가에서 나옴
 const seen = new Set();
 for (let r = 1; r <= 8; r++) Object.keys(dist(r)).forEach((id) => seen.add(id));

@@ -222,7 +222,7 @@ function starBump(k, karts) {
 }
 
 // 컴퓨터 아이템 쓰기 (첫 칸만): 앞 카트가 사거리 안이면 공격, 1등이면 뒤로 던짐, 방패는 공격이 날아올 때
-const AI_REACH = 200, AI_REACH_AGGRO = 260; // 공격 아이템 사거리 (공격형은 더 멀리서)
+const AI_REACH = 260, AI_REACH_AGGRO = 320; // 공격 아이템 사거리 (공격형은 더 멀리서)
 function aiUseItems(a, dt) {
   a.itemHeld += dt;
   const id = a.items[0], [ahead, gapA] = kartAhead(a), [behind, gapB] = kartBehind(a);

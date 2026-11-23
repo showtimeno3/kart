@@ -5,7 +5,7 @@
 const SHOT = { // 종류별 속도(초당 거리), 수명(초), 맞혔을 때 문구
   balloon: { speed: 70, life: 4, msg: '풍덩! 🎈' },
   homing: { speed: 70, life: 6, msg: '풍덩! 🎯' },
-  bee: { speed: 90, life: 8, msg: '따끔! 🐝' },
+  bee: { speed: 110, life: 14, msg: '따끔! 🐝' }, // 멀리 앞선 1등도 따라잡게
   tornado: { speed: 45, life: 6, msg: '빙글빙글! 🌀' },
   boomerang: { speed: 70, life: 4, msg: '딱! 🪃' },
 };
