@@ -21,6 +21,8 @@ function kartBehind(k) {
   return best ? [best, bd * game.T.segLen] : [null, Infinity];
 }
 const kartIdx = (k) => (k === game.p ? game.p.idx : k.idx);
+const onSc = (k) => (k === game.p ? !!game.p.onSc : !!k.sc); // 지름길 위에 있는가
+const scDist = (k) => (k === game.p ? game.p.scK * game.T.sc.step : k.sc.s); // 지름길 시작부터 간 거리
 
 function resetEffects(k) {
   Object.assign(k, { item: null, charges: 0, shield: 0, star: 0, magnet: 0, sticky: 0, bubble: 0, bubbleT: 0, hint: false, itemHeld: 0, itemT: 0, shieldMesh: null });
@@ -122,10 +124,15 @@ function applyHint(g) {
 function dropHazard(kind, k) {
   const { T, A } = game, cfg = HAZARD[kind];
   const at = kartPoint(k.kart, 0, 0, kind === 'honey' ? -5.5 : -3.2);
-  const i = nearest(T, at, kartIdx(k));
-  const lat = (at.x - T.pos[i].x) * T.right[i].x + (at.z - T.pos[i].z) * T.right[i].z;
   const mesh = kind === 'banana' ? M.makeBanana() : kind === 'honey' ? M.honeyPuddle() : M.iceWall();
-  mesh.position.set(at.x, groundY(T, A, i, lat), at.z); mesh.rotation.y = T.head[i];
+  if (onSc(k)) { // 지름길 위: 지름길 높이·방향
+    const [kk] = scNearest(T, at);
+    mesh.position.set(at.x, T.sc.pos[kk].y, at.z); mesh.rotation.y = T.sc.head[kk];
+  } else {
+    const i = nearest(T, at, kartIdx(k));
+    const lat = (at.x - T.pos[i].x) * T.right[i].x + (at.z - T.pos[i].z) * T.right[i].z;
+    mesh.position.set(at.x, groundY(T, A, i, lat), at.z); mesh.rotation.y = T.head[i];
+  }
   game.scene.add(mesh);
   game.hazards.push({ kind, mesh, owner: k, age: 0, r: cfg.r, life: cfg.life, touched: new Set() });
   if (k === game.p) { if (kind === 'ice') Sound.sfx.ice(); else if (kind === 'honey') Sound.sfx.honey(); }
@@ -135,11 +142,18 @@ function dropHazard(kind, k) {
 function throwShot(kind, k, target) {
   const { T } = game, me = k === game.p, i = kartIdx(k);
   // 플레이어가 비스듬히 던지면 옆으로도 날아가고 벽에 튕김 (도로 방향과 차 방향의 차이)
-  const latV = me ? clamp(SHOT_SPEED * Math.sin(T.head[i] - game.p.h), -25, 25) : 0;
+  const sc = onSc(k) ? { s: scDist(k) + 4 } : null; // 지름길에서 던지면 지름길을 따라 날아감
+  const head = sc ? T.sc.head[clamp(Math.round(sc.s / T.sc.step), 0, T.sc.n - 1)] : T.head[i];
+  const latV = me ? clamp(SHOT_SPEED * Math.sin(head - game.p.h), -25, 25) : 0;
   const mesh = M.waterBalloon(kind === 'homing' ? 0xff5a5a : 0x4fb3ff);
   game.scene.add(mesh);
-  game.shots.push({ kind, mesh, owner: k, target, s: kartProg(k) + 4 / T.segLen, lat: k.lat, latV, age: 0 });
+  game.shots.push({ kind, mesh, owner: k, target, s: kartProg(k) + 4 / T.segLen, sc, lat: k.lat, latV, age: 0 });
   if (me) { Sound.sfx.throw(); flash(kind === 'homing' ? '따라가는 물풍선! 🎯' : '물풍선! 🎈', 'info'); }
+}
+// 물풍선 명중: 실제 거리로 판정 (진행도·옆 위치로 하면 다른 길에 있는 카트가 맞을 수 있음)
+function shotHits(s, k) {
+  const p = s.mesh.position;
+  return Math.hypot(p.x - k.pos.x, p.z - k.pos.z) < 2.8 && Math.abs(k.y + 1.3 - p.y) < 3;
 }
 function splash(at) {
   Particles.burst(at, 20, 0x8fd8ff, 9, { add: false, grav: 18, size: 0.7 });
@@ -155,9 +169,9 @@ function updateItems(dt) {
     for (const f of ['shield', 'star', 'magnet', 'sticky', 'bubble']) k[f] = Math.max(0, k[f] - dt);
     if (k.magnet > 0) {
       const [t, gap] = kartAhead(k);
-      if (t && gap < 120) {
+      if (t && gap < 120 && onSc(t) === onSc(k)) { // 같은 길에 있을 때만 끌려감
         k.boost = Math.max(k.boost, 0.15);
-        if (me) { const rv = T.right[k.idx], d = clamp(t.lat - k.lat, -1, 1) * 8 * dt; k.pos.addScaledVector(rv, d); }
+        if (me) { const rv = k.onSc ? T.sc.right[k.scK] : T.right[k.idx], d = clamp(t.lat - k.lat, -1, 1) * 8 * dt; k.pos.addScaledVector(rv, d); }
         else k.latT = t.lat;
         if (Math.random() < 0.4) Particles.emit(kartPoint(k.kart, 0, 1.2, 2.5), { color: 0xff5a7a, vx: 0, vy: 0, life: 0.3, size: 0.5, add: true });
       }
@@ -193,20 +207,32 @@ function updateItems(dt) {
   const sh = game.shots;
   for (let n = sh.length - 1; n >= 0; n--) {
     const s = sh[n];
-    s.age += dt; s.s += (SHOT_SPEED / T.segLen) * dt;
-    if (s.kind === 'homing' && s.target) s.lat = approach(s.lat, s.target.lat, 14 * dt);
+    s.age += dt;
+    const sc = T.sc;
+    if (s.sc) { // 지름길: 지름길 거리만큼 가면 본 도로 갈림점 사이 진행도만큼 셈, 끝나면 본 도로로
+      s.sc.s += SHOT_SPEED * dt; s.s += ((SHOT_SPEED * dt) / T.segLen) * ((sc.span * T.segLen) / sc.len);
+      if (s.sc.s >= sc.len) { s.sc = null; s.lat += sc.lat1; }
+    } else s.s += (SHOT_SPEED / T.segLen) * dt;
+    const kf = s.sc ? Math.min(s.sc.s / sc.step, sc.n - 1.001) : 0, k0 = Math.floor(kf);
+    const lim = (s.sc ? sc.half[k0] : HW) - 1;
+    if (s.kind === 'homing' && s.target && onSc(s.target) === !!s.sc) s.lat = approach(s.lat, s.target.lat, 14 * dt); // 같은 길에 있을 때만 따라감
     else {
       s.lat += s.latV * dt;
-      if (Math.abs(s.lat) > HW - 1) { s.lat = Math.sign(s.lat) * (HW - 1); s.latV = -s.latV * 0.8; } // 벽에 튕김
+      if (Math.abs(s.lat) > lim) { s.lat = Math.sign(s.lat) * lim; s.latV = -s.latV * 0.8; } // 벽에 튕김
     }
-    const f = ((s.s % N) + N) % N, i0 = Math.floor(f), i1 = (i0 + 1) % N;
-    s.mesh.position.lerpVectors(T.pos[i0], T.pos[i1], f - i0).addScaledVector(T.right[i0], s.lat);
-    s.mesh.position.y = groundY(T, A, f, s.lat) + 1.3 + Math.sin(s.age * 14) * 0.15;
+    if (s.sc) {
+      s.mesh.position.lerpVectors(sc.pos[k0], sc.pos[k0 + 1], kf - k0).addScaledVector(sc.right[k0], s.lat);
+      s.mesh.position.y = sc.pos[k0].y + 1.3 + Math.sin(s.age * 14) * 0.15;
+    } else {
+      const f = ((s.s % N) + N) % N, i0 = Math.floor(f), i1 = (i0 + 1) % N;
+      s.mesh.position.lerpVectors(T.pos[i0], T.pos[i1], f - i0).addScaledVector(T.right[i0], s.lat);
+      s.mesh.position.y = groundY(T, A, f, s.lat) + 1.3 + Math.sin(s.age * 14) * 0.15;
+    }
     s.mesh.rotation.y += dt * 6;
     let gone = s.age > (s.kind === 'homing' ? 6 : 4);
     for (const k of karts) {
       if (gone || k === s.owner || (s.kind === 'homing' && s.target && k !== s.target && s.age < 5)) continue;
-      if (Math.abs(kartProg(k) - s.s) * T.segLen < 3 && Math.abs(k.lat - s.lat) < 2.4 && Math.abs(k.y + 1.3 - s.mesh.position.y) < 3) {
+      if (shotHits(s, k)) {
         hitKart(k, 'spin', '풍덩! 🎈'); gone = true;
       }
     }

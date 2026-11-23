@@ -62,4 +62,11 @@ function setup(...ais) {
   assert.strictEqual(o.spin, 0, '방패로 막은 뒤 다음 프레임에 다시 맞음');
   assert.strictEqual(bare.spin, 0, '같은 별에 두 번 맞음');
 }
+// 물풍선 명중은 실제 거리로: 진행도·옆 위치가 같아도 다른 길(지름길)에 멀리 있으면 안 맞음
+{
+  const shot = { mesh: { position: { x: 0, y: 1.3, z: 0 } } };
+  assert.strictEqual(ctx.shotHits(shot, kart({ pos: { x: 1.5, z: 1 } })), true);
+  assert.strictEqual(ctx.shotHits(shot, kart({ pos: { x: 40, z: 0 } })), false, '멀리 있는 카트가 맞음');
+  assert.strictEqual(ctx.shotHits(shot, kart({ pos: { x: 0, z: 0 }, y: 9 })), false, '높이가 다른 카트(다리 위/아래)가 맞음');
+}
 console.log('items-hit: all tests passed');
