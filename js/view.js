@@ -58,6 +58,7 @@ function updateWorld(dt) {
     }
   }
   updateItems(dt);
+  separateAIs(dt);
   for (const o of scene.children) if (o.userData.cloud) o.position.x += dt * 2;
   for (const bl of deco.balloons) { bl.position.y = bl.userData.baseY + Math.sin(game.t * 0.4 + bl.userData.phase) * 6; bl.rotation.y += dt * 0.1; }
   for (const r of deco.spinners) r.rotation.z += dt * 0.8;

@@ -48,6 +48,9 @@
     rabbit: { name: '토끼', fur: 0xf4f4f8, light: 0xffffff, kart: 0xec407a },
     frog: { name: '개구리', fur: 0x5cbf3a, light: 0xd8f5a2, kart: 0xfdd835 },
     penguin: { name: '펭귄', fur: 0x2d3550, light: 0xffffff, kart: 0x26c6da },
+    fox: { name: '여우', fur: 0xe8732c, light: 0xfff1e0, kart: 0x8e24aa },
+    panda: { name: '판다', fur: 0xf5f5f5, light: 0xffffff, kart: 0x43a047 },
+    duck: { name: '오리', fur: 0xffd54f, light: 0xfff8e1, kart: 0xff7043 },
   };
   const PINK = 0xff9aa2, DARK = 0x1b1b2f;
 
@@ -65,8 +68,11 @@
     // 머리
     const head = new THREE.Group(); head.position.set(0, 1.3, 0.05); g.add(head);
     part(new THREE.SphereGeometry(0.6, 20, 16), fur, head, 0, 0, 0, { outline: 1.05 });
-    const frog = species === 'frog', penguin = species === 'penguin';
-    if (penguin) {
+    const frog = species === 'frog', penguin = species === 'penguin', duck = species === 'duck';
+    if (duck) { // 납작한 주황 부리 + 머리 위 깃털
+      part(new THREE.SphereGeometry(0.3, 14, 10), toon(0xff9f1c), head, 0, -0.16, 0.56, { s: [1.15, 0.38, 1], outline: 1.08 });
+      part(new THREE.ConeGeometry(0.08, 0.3, 6), fur, head, 0.04, 0.66, 0, { rz: -0.3, outline: 1.1 });
+    } else if (penguin) {
       part(new THREE.SphereGeometry(0.5, 16, 12), white, head, 0, -0.08, 0.28, { s: [1, 0.85, 0.55], cast: false });
       part(new THREE.ConeGeometry(0.12, 0.32, 8), toon(0xff9f1c), head, 0, -0.12, 0.7, { rx: Math.PI / 2, outline: 1.1 });
     } else if (!frog) {
@@ -97,6 +103,13 @@
       } else if (species === 'cat') {
         part(new THREE.ConeGeometry(0.2, 0.42, 8), fur, head, s * 0.36, 0.55, 0, { rz: -s * 0.35, outline: 1.08 });
         part(new THREE.ConeGeometry(0.1, 0.24, 8), pink, head, s * 0.35, 0.52, 0.09, { rz: -s * 0.35, cast: false });
+      } else if (species === 'fox') { // 크고 뾰족한 귀, 끝은 짙은 색
+        part(new THREE.ConeGeometry(0.24, 0.55, 8), fur, head, s * 0.36, 0.58, 0, { rz: -s * 0.32, outline: 1.08 });
+        part(new THREE.ConeGeometry(0.12, 0.3, 8), toon(0xfff1e0), head, s * 0.35, 0.53, 0.1, { rz: -s * 0.32, cast: false });
+        part(new THREE.ConeGeometry(0.1, 0.16, 8), dark, head, s * 0.46, 0.83, 0, { rz: -s * 0.32, cast: false });
+      } else if (species === 'panda') { // 검은 둥근 귀 + 눈 주위 검은 무늬
+        part(new THREE.SphereGeometry(0.21, 12, 10), dark, head, s * 0.42, 0.45, -0.05, { outline: 1.08 });
+        part(new THREE.SphereGeometry(0.17, 12, 10), dark, head, s * 0.24, 0.1, 0.47, { s: [1, 1.3, 0.5], rz: s * 0.5, cast: false });
       } else if (species === 'rabbit') {
         part(new THREE.CapsuleGeometry(0.11, 0.55, 4, 8), fur, head, s * 0.2, 0.95, -0.05, { rz: -s * 0.15, outline: 1.08 });
         part(new THREE.CapsuleGeometry(0.06, 0.42, 4, 8), pink, head, s * 0.2, 0.93, 0.04, { rz: -s * 0.15, cast: false });

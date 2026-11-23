@@ -89,20 +89,21 @@ function startRace() {
     idx: 8, idxF: 8, lat: 0, laps: 0, drift: { on: false, dir: 0, charge: 0 }, boost: 0, slow: 0, spin: 0, spinA: 0,
     y: T.pos[8].y, vy: 0, gy: T.pos[8].y, air: 0, airT: 0, land: 0, hopCd: 0, canTrick: false, trick: 0, tricked: false,
     roll: 0, pitch: 0, slopeP: 0, bodyYaw: 0, wheel: 0, shake: 0, padCd: 0, wet: 0,
-    rolling: 0, rollTick: 0, combo: 0, finished: false, finishTime: 0, rank: 5, gasAt: -99 };
+    rolling: 0, rollTick: 0, combo: 0, finished: false, finishTime: 0, rank: AI_COUNT + 1, gasAt: -99 };
   resetEffects(p);
   const others = SPECIES_KEYS.filter((s) => s !== settings.species);
-  const grid = [[44, -9], [44, 9], [26, -9], [26, 9]];
+  const grid = [[98, -9], [98, 9], [80, -9], [80, 9], [62, -9], [62, 9], [44, 0]]; // 플레이어는 [8, 0]
+  const PERSONAS = ['aggro', 'steady', 'prank']; // 공격형, 안정형, 장난꾸러기
   const ais = grid.slice(0, AI_COUNT).map(([i, lat], k) => {
     const kart = M.makeKart(others[k]); scene.add(kart.root);
     return { kart, species: others[k], name: M.SPECIES[others[k]].name, color: M.SPECIES[others[k]].kart, d: i * T.segLen, idx: i, lat, latT: lat, latV: 0, speed: 0,
-      base: (33 + k * 1.1 + Math.random() * 2) * DIFF.speed, skill: DIFF.skill + Math.random() * 0.12,
+      persona: PERSONAS[k % 3], base: (33 + k * 0.6 + Math.random() * 2 + (k % 3 === 0 ? 0.6 : 0)) * DIFF.speed, skill: DIFF.skill + Math.random() * 0.12 + (k % 3 === 1 ? 0.08 : 0),
       boost: 0, slow: 0, spin: 0, banana: 12 + Math.random() * 14, finished: false, finishTime: 0,
       roll: 0, bodyYaw: 0, wheel: 0, planGate: null, planLane: -1, pos: new THREE.Vector3(), y: T.pos[i].y, vy: 0, gy: T.pos[i].y, padCd: 0 };
   });
   ais.forEach(resetEffects);
 
-  game = { scene, sky, sun, T, A, deco, gates, boxes, p, ais, hazards: [], shots: [], t: -3.5, state: 'intro', introT: 0, paused: false, lastRank: 5, lastLap: 0, wrongT: 0, fps: [], def, bank: loadBank(),
+  game = { scene, sky, sun, T, A, deco, gates, boxes, p, ais, hazards: [], shots: [], t: -3.5, state: 'intro', introT: 0, paused: false, lastRank: AI_COUNT + 1, lastLap: 0, wrongT: 0, fps: [], def, bank: loadBank(),
     stats: { total: 0, correct: 0, wrong: [], items: {}, hits: {}, shieldBlocks: 0 }, nextGate: null, endTimer: 0, lastCount: 99, camYaw: p.h, camY: p.y, qx: null, qy: null,
     minimap: buildMinimap(T) };
 

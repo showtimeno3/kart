@@ -49,6 +49,8 @@ function applyQuality() {
     fxaaPass.material.uniforms.resolution.value.set(1 / (innerWidth * pr), 1 / (innerHeight * pr));
   }
   if (game) game.scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; }); // 그림자 켜고 끈 것 반영
+  // 빠르게: 컴퓨터 카트의 외곽선을 숨겨 그리기 횟수를 줄임 (카트 하나에 외곽선 수십 개)
+  if (game) for (const ai of game.ais) ai.kart.root.traverse((o) => { if (o.material === M.OUTLINE) o.visible = high; });
 }
 function draw(scene, cam, speed = 0) {
   if (settings.quality === 'high' && composer) {

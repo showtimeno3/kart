@@ -3,7 +3,7 @@
 'use strict';
 
 const M = window.Models;
-const LAPS = 2, N = 1600, HW = 20, LANE = 12, EDGE = HW + 5.2, AI_COUNT = 4;
+const LAPS = 2, N = 1600, HW = 20, LANE = 12, EDGE = HW + 5.2, AI_COUNT = 7;
 const MAX_SPEED = 38, BOOST_MUL = 1.4, G = 30, KMH = 3.2;
 const LANE_COLORS = ['#e74c3c', '#2e86de', '#1e8449'];
 const FONT = "'Jua', 'Malgun Gothic', sans-serif";

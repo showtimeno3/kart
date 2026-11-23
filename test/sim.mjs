@@ -11,11 +11,12 @@ const browser = BROWSERS.find((p) => existsSync(p));
 if (!browser) { console.error('Chrome/Edge 를 찾지 못함'); process.exit(2); }
 
 const args = process.argv.slice(2);
-let save = null, compare = null;
+let save = null, compare = null, extra = [];
 const hashes = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--save') save = args[++i];
   else if (args[i] === '--compare') compare = args[++i];
+  else if (args[i] === '--swiftshader') extra = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--window-size=1280,720']; // 그래픽카드 없이 소프트웨어 렌더링
   else hashes.push(args[i]);
 }
 if (!hashes.length) hashes.push('sim=400&track=0', 'sim=400&track=1', 'sim=400&track=0&subject=english', 'sim=400&track=1&drift=1');
@@ -40,7 +41,7 @@ function run(hash, extra = []) {
       while ((k = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, k); buf = buf.slice(k + 1);
         if (/CONSOLE/.test(line) && /Uncaught|Error/.test(line) && !/runtime.lastError/.test(line)) errors.push(line.trim().slice(0, 300));
-        const m = /"SIM (\{.*\})"/.exec(line);
+        const m = /"(?:SIM|BENCH) (\{.*\})"/.exec(line); // #bench 는 BENCH 로 출력
         if (m) { result = JSON.parse(m[1].replace(/\\"/g, '"')); finish('ok'); return; }
       }
     });
@@ -52,7 +53,7 @@ function run(hash, extra = []) {
 let failed = false;
 const out = {};
 for (const h of hashes) {
-  const r = await run(h);
+  const r = await run(h, extra);
   out[h] = r.result;
   console.log(`${h} → ${r.result ? JSON.stringify(r.result) : '결과 없음 (' + r.why + ')'}`);
   if (!r.result || r.errors.length) failed = true;

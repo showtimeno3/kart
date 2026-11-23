@@ -34,11 +34,12 @@ function updateAIs(dt) {
     }
     for (const pd of A.pads) if (a.padCd === 0 && inRange(a.idx, pd.i0 - 4, 8) && Math.abs(a.lat - pd.lat) < 5) { a.boost = Math.max(a.boost, 1.0); a.padCd = 0.6; }
     for (const r of A.ramps) if (crossed(prev, a.idx, r.i1) && Math.abs(a.lat - r.lat) < r.w / 2) a.vy = 8 + r.h * 2 + a.speed * 0.08;
-    a.latV = damp(a.latV, (a.latT - a.lat) * 1.4, 3.5, dt);
+    const inside = a.persona === 'aggro' && Math.abs(T.curv[a.idx]) > 0.1 ? -Math.sign(T.curv[a.idx]) * 4 : 0; // 공격형은 커브 안쪽
+    a.latV = damp(a.latV, (a.latT + inside - a.lat) * 1.4, 3.5, dt);
     a.lat = clamp(a.lat + a.latV * dt, -(HW - 1.5), HW - 1.5);
     if (racing) {
       a.banana -= dt;
-      if (a.banana <= 0) { a.banana = 14 + Math.random() * 16; dropHazard('banana', a); }
+      if (a.banana <= 0) { a.banana = a.persona === 'prank' ? 8 + Math.random() * 6 : 14 + Math.random() * 16; dropHazard('banana', a); }
     }
     if (!a.finished && aiTotal(a) >= LAPS * N) { a.finished = true; a.finishTime = game.t; }
 
@@ -72,6 +73,19 @@ function updateAIs(dt) {
         if (-vrel > 4) { Sound.sfx.bump(); p.shake = Math.max(p.shake, 0.3); }
       }
     }
+  }
+}
+
+// 컴퓨터끼리 부딪힘: 가까우면 옆으로 밀어내고, 뒤 카트는 앞 카트보다 빨리 못 감
+function separateAIs(dt) {
+  const { ais, T } = game;
+  for (let i = 0; i < ais.length; i++) for (let j = i + 1; j < ais.length; j++) {
+    const a = ais[i], b = ais[j], dd = (aiTotal(a) - aiTotal(b)) * T.segLen, dl = a.lat - b.lat;
+    if (Math.abs(dd) > 3.5 || Math.abs(dl) > 2.6 || Math.abs(a.y - b.y) > 2.5) continue;
+    const s = dl >= 0 ? 1 : -1;
+    a.latV += s * 20 * dt; b.latV -= s * 20 * dt;
+    const [front, back] = dd >= 0 ? [a, b] : [b, a];
+    back.speed = Math.min(back.speed, front.speed);
   }
 }
 

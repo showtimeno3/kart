@@ -63,7 +63,7 @@ const showcase = (() => {
         confetti.instanceMatrix.needsUpdate = true;
         cam.position.set(wide ? -1.8 : 0, 5, -15); cam.lookAt(wide ? -1.8 : 0, 1.4, 0);
       } else {
-        stage.rotation.y = t * 0.6;
+        stage.rotation.y = showcase.angle != null ? showcase.angle : t * 0.6; // angle: 화면 점검용 고정 각도
         if (kart) { kart.body.position.y = Math.abs(Math.sin(t * 3)) * 0.15; kart.head.rotation.z = Math.sin(t * 2) * 0.15; }
         stage.position.x = wide ? -3.6 : 0; // 오른쪽에 보이도록 (카메라가 +z 를 바라봄 → 화면 오른쪽 = -x)
         cam.position.set(wide ? -1.5 : 0, 4.2, -11.5); cam.lookAt(wide ? -1.5 : 0, 1.2, 0);

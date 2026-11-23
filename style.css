@@ -169,6 +169,13 @@ button { font-family: var(--font); }
   .big { font-size: 28px; padding: 8px 40px; margin-top: 10px; }
   .help { font-size: 14px; margin-top: 8px; }
 }
+/* 캐릭터가 8종이라 두 줄: 낮은 화면에서도 '출발!' 이 스크롤 없이 보이게 */
+@media (max-height: 760px) {
+  .logo .l1 { font-size: 24px; }
+  .logo .l2 { font-size: 38px; }
+  .sub { display: none; }
+  .opt { padding: 4px 10px; margin: 2px; }
+}
 /* 휴대폰: 지도 숨김, 아래쪽 정보 작게, 터치 버튼 정리 */
 @media (max-width: 760px) {
   #minimap { display: none; }

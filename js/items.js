@@ -213,15 +213,27 @@ function updateItems(dt) {
   if (racing) for (const a of game.ais) if (a.item) aiUseItems(a, dt);
 }
 
+// 앞쪽 가까이에 함정이나 날아오는 물풍선이 있는가 (안정형 방패용)
+function dangerNear(a) {
+  const segLen = game.T.segLen, me = kartProg(a);
+  for (const s of game.shots) if (s.owner !== a && Math.abs(s.s - me) * segLen < 25) return true;
+  for (const h of game.hazards) {
+    const dx = h.mesh.position.x - a.pos.x, dz = h.mesh.position.z - a.pos.z;
+    if (h.owner !== a && dx * dx + dz * dz < 25 * 25) return true;
+  }
+  return false;
+}
+
 // 컴퓨터 아이템 쓰기: 앞 카트가 가까우면 공격, 뒤 카트가 가까우면 함정, 나머지는 잠깐 뒤
 function aiUseItems(a, dt) {
   a.itemHeld += dt;
   const id = a.item;
   let use = a.itemHeld > 8;
-  if (id === 'balloon' || id === 'homing' || id === 'bubble') { const [t, gap] = kartAhead(a); use = use || (t && gap < 80); }
+  const reach = a.persona === 'aggro' ? 120 : 80; // 공격형은 더 멀리서도 던짐
+  if (id === 'balloon' || id === 'homing' || id === 'bubble') { const [t, gap] = kartAhead(a); use = use || (t && gap < reach); }
   else if (id === 'magnet') { const [t, gap] = kartAhead(a); use = use || (t && gap < 120); }
-  else if (id === 'banana' || id === 'honey' || id === 'ice') { const [t, gap] = kartBehind(a); use = use || (t && gap < 60); }
-  else if (id === 'shield') use = use || a.itemHeld > 1;
+  else if (id === 'banana' || id === 'honey' || id === 'ice') { const [t, gap] = kartBehind(a); use = use || (a.persona === 'prank' ? a.itemHeld > 1 : t && gap < 60); }
+  else if (id === 'shield') use = use || (a.persona === 'steady' ? dangerNear(a) : a.itemHeld > 1); // 안정형은 위험할 때만 방패
   else use = use || a.itemHeld > a.itemT;
   if (use) useItemFor(a);
 }

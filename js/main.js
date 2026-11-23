@@ -87,11 +87,13 @@ if (simMode) {
   startRace(); simulate(+hashArgs.get(simMode));
   if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(); } } // use=아이템: 화면 점검용
   if (hashArgs.get('pause') === '1') togglePause();
+} else if (hashArgs.has('showcase')) { showcase.setSpecies(hashArgs.get('showcase')); showcase.angle = +(hashArgs.get('ang') || 2.6); // 메뉴 캐릭터 화면 점검용
 } else if (location.hash === '#intro') { startRace(); game.introT = 1.2; step(0); }
 else if (/^#bench/.test(location.hash)) { // #bench[&track=n][&quality=low]: 실제 시간 성능 측정
   const m = /track=(\d)/.exec(location.hash); if (m) settings.track = +m[1];
   settings.quality = /quality=low/.test(location.hash) ? 'low' : 'high';
   startRace(); skipIntro(); bench = [];
+  setTimeout(() => console.log('BENCH ' + JSON.stringify(window.__benchReport())), 20000); // 20초 뒤 결과를 콘솔에 (test/sim.mjs 가 읽음)
   window.__benchReport = () => { const a = bench.slice(60).sort((x, y) => x - y), avg = a.reduce((s, v) => s + v, 0) / a.length;
     const wk = bench.work.slice(60).sort((x, y) => x - y), gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
     return { quality: settings.quality, frames: a.length, avgMs: +avg.toFixed(2), fps: Math.round(1000 / avg), p95Ms: +a[Math.floor(a.length * 0.95)].toFixed(2),
