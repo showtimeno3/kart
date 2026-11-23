@@ -47,7 +47,8 @@ function sampleShortcut(sc, T, tan) {
   // 반폭: 양 끝 90 거리 안에서는 깔때기처럼 넓어짐(최대 21) → 본 도로와 지름길 사이에 틈(벽)이 생기지 않고, 급한 입구도 넓게 돌 수 있음
   const half = pos.map((_, k) => SHW + 14 * (1 - sstep(0, 90, Math.min(k, n - 1 - k) * step)));
   const lat0 = (pos[0].x - T.pos[i0].x) * T.right[i0].x + (pos[0].z - T.pos[i0].z) * T.right[i0].z; // 지름길 시작점의 본 도로 기준 옆 위치
-  return { pos, head, right, half, lat0, n, i0, i1, span: (i1 - i0 + N) % N, len, step, surf: sc.surface, box: new THREE.Box3().setFromPoints(pos) };
+  const lat1 = (pos[n - 1].x - T.pos[i1].x) * T.right[i1].x + (pos[n - 1].z - T.pos[i1].z) * T.right[i1].z; // 끝점의 본 도로 기준 옆 위치
+  return { pos, head, right, half, lat0, lat1, n, i0, i1, span: (i1 - i0 + N) % N, len, step, surf: sc.surface, box: new THREE.Box3().setFromPoints(pos) };
 }
 // 지름길 위 가장 가까운 점 k 와 옆 거리 lat
 function scNearest(T, v) {

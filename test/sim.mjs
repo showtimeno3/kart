@@ -58,6 +58,8 @@ for (const h of hashes) {
   console.log(`${h} → ${r.result ? JSON.stringify(r.result) : '결과 없음 (' + r.why + ')'}`);
   if (!r.result || r.errors.length) failed = true;
   for (const e of r.errors) console.log('  콘솔 오류: ' + e);
+  // 컴퓨터가 한 프레임에 크게 튀면(지름길 드나들 때 순간이동 등) 실패
+  if (r.result && r.result.aiJump > 3) { failed = true; console.log(`  컴퓨터 위치가 한 프레임에 ${r.result.aiJump} 튐 (3 초과)`); }
 }
 if (save) writeFileSync(save, JSON.stringify(out, null, 1));
 if (compare) {

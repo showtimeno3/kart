@@ -17,11 +17,12 @@ function updateAIs(dt) {
     const prev = a.idx, sc = T.sc;
     if (a.sc) { // 지름길: 지름길 거리만큼 가면 본 도로 갈림점 사이 거리만큼 진행한 것으로 셈
       a.sc.s += a.speed * dt; a.d += a.speed * dt * (sc.span * T.segLen) / sc.len;
-      if (a.sc.s >= sc.len) a.sc = null;
+      if (a.sc.s > sc.len - 80) a.latT = -Math.sign(sc.lat1) * 3; // 나오기 전에 본 도로 쪽으로 붙음
+      if (a.sc.s >= sc.len) { a.sc = null; a.lat += sc.lat1; a.latT = a.lat; } // 끝점은 본 도로 중심에서 옆으로 lat1: 위치를 이어 줌
     } else a.d += a.speed * dt;
     const f = (a.d / T.segLen) % N;
     a.idx = Math.floor(f);
-    if (!a.sc && sc && racing && crossed(prev, a.idx, sc.i0) && Math.random() < SC_PROB[a.persona]) { a.sc = { s: 0 }; a.planGate = null; }
+    if (!a.sc && sc && racing && crossed(prev, a.idx, sc.i0) && Math.abs(a.lat - sc.lat0) < sc.half[0] - 2 && Math.random() < SC_PROB[a.persona]) { a.sc = { s: 0 }; a.planGate = null; a.lat -= sc.lat0; a.latT = 0; } // 시작점은 본 도로 중심에서 옆으로 lat0
     // 다가오는 문의 문제가 보이면 정답(또는 실수로 오답) 차선으로 이동
     const [g, dist] = nextGateFrom(a.idx);
     if (!a.sc && g && dist < 110 && a.planGate !== g) {
@@ -41,7 +42,7 @@ function updateAIs(dt) {
     for (const r of A.ramps) if (!a.sc && crossed(prev, a.idx, r.i1) && Math.abs(a.lat - r.lat) < r.w / 2) a.vy = 8 + r.h * 2 + a.speed * 0.08;
     const inside = a.persona === 'aggro' && Math.abs(T.curv[a.idx]) > 0.1 ? -Math.sign(T.curv[a.idx]) * 4 : 0; // 공격형은 커브 안쪽
     a.latV = damp(a.latV, (a.latT + inside - a.lat) * 1.4, (a.sc ? T.sc.surf : T.surf[a.idx]) === 'ice' ? 1.2 : 3.5, dt); // 얼음에서는 옆으로 미끄러짐
-    const half = a.sc ? SHW - 1.5 : HW - 1.5;
+    const half = a.sc ? sc.half[Math.min(sc.n - 1, Math.round(a.sc.s / sc.step))] - 1.5 : HW - 1.5; // 지름길은 깔때기 폭
     a.lat = clamp(a.lat + a.latV * dt, -half, half);
     if (racing) {
       a.banana -= dt;
@@ -62,6 +63,8 @@ function updateAIs(dt) {
       vertical(a, groundY(T, A, f, a.lat), dt);
     }
     a.pos.y = a.y;
+    if (a.prevPos) { const j = Math.hypot(a.pos.x - a.prevPos.x, a.pos.z - a.prevPos.z) - a.speed * dt; if (j > (game.stats.aiJump || 0)) game.stats.aiJump = j; } // 점검용: 한 프레임 위치 튐
+    (a.prevPos = a.prevPos || new THREE.Vector3()).copy(a.pos);
     const curv = a.sc ? 0 : T.curv[i0], drifting = Math.abs(curv) > 0.22 && a.speed > 26 && a.spin <= 0 && a.y - a.gy < 0.1;
     a.bodyYaw = damp(a.bodyYaw, drifting ? Math.sign(curv) * 0.36 : 0, 5, dt);
     a.roll = damp(a.roll, clamp(curv * a.speed * 0.012, -0.12, 0.12) - (a.sc ? 0 : Math.atan(T.bank[i0])), 6, dt);
