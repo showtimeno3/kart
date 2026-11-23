@@ -42,12 +42,13 @@ function blocked(k) {
   return true;
 }
 
-// 맞음: 막히면 false, 아니면 효과를 주고 true
-function hitKart(k, effect, msg) {
+// 맞음: 막히면 false, 아니면 효과를 주고 true. attack: 다른 카트의 공격(점검용 집계)
+function hitKart(k, effect, msg, attack = false) {
   if (k.finished) return false;
   const me = k === game.p;
   const hs = game.stats.hits; hs[effect] = (hs[effect] || 0) + 1; // 점검용: 효과별 맞은 횟수 (막은 것 포함)
   if (blocked(k)) return false;
+  if (me && attack) game.stats.pAtk = (game.stats.pAtk || 0) + 1;
   if (effect === 'spin') {
     k.spin = me ? 1.1 : 1.0;
     if (me) { flash(msg || '미끄덩!', 'bad'); Sound.sfx.spin(); game.stats.spins = (game.stats.spins || 0) + 1; if (k.drift.on) endDrift(false); }
@@ -107,7 +108,7 @@ function useItemFor(k, back = false) {
   else if (id === 'tornado' || id === 'boomerang') throwShot(id, k, null);
   else if (id === 'magnet') { k.magnet = 3; if (me) { flash('자석! 🧲', 'info'); Sound.sfx.magnet(); } }
   else if (id === 'bubble') {
-    for (const o of allKarts()) if (o !== k && kartProg(o) > kartProg(k)) hitKart(o, 'bubble');
+    for (const o of allKarts()) if (o !== k && kartProg(o) > kartProg(k)) hitKart(o, 'bubble', null, true);
     if (me) { flash('비눗방울 구름! 🫧', 'info'); Sound.sfx.bubble(); }
   } else if (id === 'star') { k.star = 6; k.starHit = new Set(); if (me) { flash('무지개 별! 🌈', 'info'); Sound.sfx.star(); } }
   else if (id === 'hint') {
@@ -212,35 +213,31 @@ function updateItems(dt) {
   if (racing) for (const a of game.ais) if (a.items.length) aiUseItems(a, dt);
 }
 
-// 앞쪽 가까이에 함정이나 날아오는 물풍선이 있는가 (안정형 방패용)
-function dangerNear(a) {
-  const segLen = game.T.segLen, me = kartProg(a);
-  for (const s of game.shots) if (s.owner !== a && Math.abs(s.s - me) * segLen < 25) return true;
-  for (const h of game.hazards) {
-    const dx = h.mesh.position.x - a.pos.x, dz = h.mesh.position.z - a.pos.z;
-    if (h.owner !== a && dx * dx + dz * dz < 25 * 25) return true;
-  }
-  return false;
-}
-
 // 무지개 별: 부딪힌 카트를 돌게 함. 별 한 번에 같은 카트는 한 번만 (방패로 막은 다음 프레임에 다시 맞지 않게)
 function starBump(k, karts) {
   for (const o of karts) {
     if (o === k || k.starHit.has(o)) continue;
-    if (Math.hypot(o.pos.x - k.pos.x, o.pos.z - k.pos.z) < 3.2 && Math.abs(o.y - k.y) < 2.5) { k.starHit.add(o); hitKart(o, 'spin', '쿵! 🌈'); }
+    if (Math.hypot(o.pos.x - k.pos.x, o.pos.z - k.pos.z) < 3.2 && Math.abs(o.y - k.y) < 2.5) { k.starHit.add(o); hitKart(o, 'spin', '쿵! 🌈', true); }
   }
 }
 
-// 컴퓨터 아이템 쓰기: 앞 카트가 가까우면 공격, 뒤 카트가 가까우면 함정, 나머지는 잠깐 뒤
+// 컴퓨터 아이템 쓰기 (첫 칸만): 앞 카트가 사거리 안이면 공격, 1등이면 뒤로 던짐, 방패는 공격이 날아올 때
+const AI_REACH = 200, AI_REACH_AGGRO = 260; // 공격 아이템 사거리 (공격형은 더 멀리서)
 function aiUseItems(a, dt) {
   a.itemHeld += dt;
-  const id = a.items[0];
-  let use = a.itemHeld > 8;
-  const reach = a.persona === 'aggro' ? 120 : 80; // 공격형은 더 멀리서도 던짐
-  if (id === 'balloon' || id === 'homing' || id === 'bubble') { const [t, gap] = kartAhead(a); use = use || (t && gap < reach); }
-  else if (id === 'magnet') { const [t, gap] = kartAhead(a); use = use || (t && gap < 120); }
-  else if (id === 'banana' || id === 'honey' || id === 'ice') { const [t, gap] = kartBehind(a); use = use || (a.persona === 'prank' ? a.itemHeld > 1 : t && gap < 60); }
-  else if (id === 'shield') use = use || (a.persona === 'steady' ? dangerNear(a) : a.itemHeld > 1); // 안정형은 위험할 때만 방패
-  else use = use || a.itemHeld > a.itemT;
-  if (use) useItemFor(a);
+  const id = a.items[0], [ahead, gapA] = kartAhead(a), [behind, gapB] = kartBehind(a);
+  const reach = a.persona === 'aggro' ? AI_REACH_AGGRO : AI_REACH, canHit = !!ahead && gapA < reach;
+  let use = false, back = false;
+  if (id === 'balloon' || id === 'ice') { // 앞 카트가 사거리 안이면 앞으로, 내가 1등이면 가까운 뒤 카트에게 뒤로
+    if (canHit) use = true;
+    else if (!ahead && behind && gapB < 80) use = back = true;
+  } else if (id === 'homing' || id === 'tornado' || id === 'boomerang') use = canHit;
+  else if (id === 'bee') use = a.itemHeld > a.itemT && !!leaderOf(a); // 내가 1등이면 들고 있음
+  else if (id === 'bubble') use = !!ahead && gapA < 80;
+  else if (id === 'magnet') use = !!ahead && gapA < 120;
+  else if (id === 'banana' || id === 'honey') use = a.persona === 'prank' ? a.itemHeld > 1 : !!behind && gapB < 60;
+  else if (id === 'shield') { const th = incomingThreat(a); use = !!th && th.dist <= (a.persona === 'steady' ? 120 : 30); } // 위협 없으면 계속 들고 있음
+  else use = a.itemHeld > a.itemT; // 부스터, 무지개 별, 힌트
+  if (!use && id !== 'shield' && id !== 'bee' && a.itemHeld > 8) use = true; // 8초 넘게 쓸 곳이 없으면 그냥 씀
+  if (use) useItemFor(a, back);
 }

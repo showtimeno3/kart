@@ -59,7 +59,7 @@ function shotTryHit(s, k) {
     if (!shotHits(s, k)) return false;
     s.gone = true;
   }
-  hitKart(k, 'spin', SHOT[s.kind].msg);
+  hitKart(k, 'spin', SHOT[s.kind].msg, true);
   return true;
 }
 function splash(s) {

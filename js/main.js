@@ -82,7 +82,7 @@ function simulate(seconds) {
   console.log('SIM ' + JSON.stringify({ state: game.state, t: game.t.toFixed(1), laps: p.laps, rank: p.rank,
     stats: game.stats.total + '/' + game.stats.correct, drifts: game.stats.drifts || 0, walls: game.stats.walls || 0, spins: game.stats.spins || 0,
     miss: game.stats.wrong.map((w) => w.want + ':' + w.lat), len: Math.round(T.length), gateGaps: gaps,
-    airMax: +airMax.toFixed(1), items: game.stats.items, shieldBlocks: game.stats.shieldBlocks, hits: game.stats.hits, scUsed: game.stats.scUsed || 0, warns: game.stats.warns || 0, aiJump: +(game.stats.aiJump || 0).toFixed(1), avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
+    airMax: +airMax.toFixed(1), items: game.stats.items, shieldBlocks: game.stats.shieldBlocks, hits: game.stats.hits, scUsed: game.stats.scUsed || 0, warns: game.stats.warns || 0, pAtk: game.stats.pAtk || 0, aiJump: +(game.stats.aiJump || 0).toFixed(1), avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
 }
 window.__eduKart = { get game() { return game; }, startRace, settings, Sound };
 
