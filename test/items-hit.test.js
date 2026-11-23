@@ -12,7 +12,7 @@ const ctx = vm.createContext({
   aiTotal: (a) => a.d, kartPoint: () => ({}), flash: noop, endDrift: noop,
   clamp: (v, a, b) => Math.max(a, Math.min(b, v)), approach: (a, b) => b,
   Particles: { burst: noop, emit: noop }, Sound: { sfx: new Proxy({}, { get: () => noop }) },
-  M: {}, ItemTable: { ITEMS: {} }, $: () => ({}),
+  M: {}, ItemTable: { ITEMS: new Proxy({}, { get: () => ({ icon: '?' }) }) }, $: () => ({ classList: { toggle: noop } }),
 });
 for (const f of ['items.js', 'shots.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx);
 
@@ -145,5 +145,35 @@ function setup(...ais) {
   assert.ok(!ctx.game.shots.some((s) => s.kind === 'bee'), '골인한 대상을 쫓는 벌떼가 남음');
   for (let k = 0; k < 45; k++) ctx.updateShots(0.1, [a, b]);
   assert.strictEqual(ctx.game.shots.length, 0, '부메랑이 4초 넘게 남음');
+}
+// 공격 경고: 나를 노리는 따라가는 아이템, 같은 길 뒤에서 다가오는 아이템 (120 안)
+{
+  const k = kart({ d: 1000, pos: { x: 0, z: 0 } }), o = kart({ d: 0 });
+  setup(k, o);
+  ctx.game.T = { segLen: 1, sc: null };
+  const shot = (o2) => Object.assign({ owner: o, target: null, dir: 1, sc: null, gone: false, mesh: { position: { x: 0, y: 1.3, z: 0 } } }, o2);
+  ctx.game.shots = [shot({ kind: 'homing', target: k, mesh: { position: { x: 100, y: 1.3, z: 0 } } })];
+  const w = ctx.incomingThreat(k);
+  assert.ok(w && Math.abs(w.dist - 100) < 1, '노리는 물풍선 경고 없음');
+  ctx.game.shots = [shot({ kind: 'homing', target: k, mesh: { position: { x: 150, y: 1.3, z: 0 } } })];
+  assert.strictEqual(ctx.incomingThreat(k), null, '150 거리에서 경고');
+  ctx.game.shots = [shot({ kind: 'balloon', s: 940 })];
+  assert.ok(ctx.incomingThreat(k), '뒤 60 에서 다가오는 물풍선 경고 없음');
+  ctx.game.shots = [shot({ kind: 'balloon', s: 1060 })];
+  assert.strictEqual(ctx.incomingThreat(k), null, '앞으로 멀어지는 물풍선에 경고');
+  ctx.game.shots = [shot({ kind: 'balloon', s: 940, owner: k })];
+  assert.strictEqual(ctx.incomingThreat(k), null, '내가 던진 것에 경고');
+}
+// 경고 중에도 Space 는 첫 칸 (방패가 둘째 칸이면 방패를 쓰지 않음)
+{
+  setup();
+  const p = ctx.game.p;
+  Object.assign(p, { items: ['hint', 'shield'], rolling: 0, finished: false, hint: false, shield: 0 });
+  ctx.game.state = 'race';
+  ctx.game.shots = [{ kind: 'homing', owner: kart(), target: p, dir: 1, sc: null, mesh: { position: { x: 10, y: 1.3, z: 0 } } }];
+  p.pos = { x: 0, z: 0 };
+  ctx.useItem();
+  assert.deepStrictEqual([...p.items], ['shield'], '경고 중에 방패를 먼저 씀');
+  assert.strictEqual(p.shield, 0);
 }
 console.log('items-hit: all tests passed');

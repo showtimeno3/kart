@@ -82,7 +82,7 @@ function simulate(seconds) {
   console.log('SIM ' + JSON.stringify({ state: game.state, t: game.t.toFixed(1), laps: p.laps, rank: p.rank,
     stats: game.stats.total + '/' + game.stats.correct, drifts: game.stats.drifts || 0, walls: game.stats.walls || 0, spins: game.stats.spins || 0,
     miss: game.stats.wrong.map((w) => w.want + ':' + w.lat), len: Math.round(T.length), gateGaps: gaps,
-    airMax: +airMax.toFixed(1), items: game.stats.items, shieldBlocks: game.stats.shieldBlocks, hits: game.stats.hits, scUsed: game.stats.scUsed || 0, aiJump: +(game.stats.aiJump || 0).toFixed(1), avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
+    airMax: +airMax.toFixed(1), items: game.stats.items, shieldBlocks: game.stats.shieldBlocks, hits: game.stats.hits, scUsed: game.stats.scUsed || 0, warns: game.stats.warns || 0, aiJump: +(game.stats.aiJump || 0).toFixed(1), avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
 }
 window.__eduKart = { get game() { return game; }, startRace, settings, Sound };
 
@@ -93,7 +93,8 @@ if (simMode) {
   for (const k of ['track', 'level', 'difficulty']) if (hashArgs.has(k)) settings[k] = +hashArgs.get(k);
   for (const k of ['subject', 'species']) if (hashArgs.has(k)) settings[k] = hashArgs.get(k);
   startRace(); simulate(+hashArgs.get(simMode));
-  if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(hashArgs.get('back') === '1'); } if (hashArgs.has('give')) hashArgs.get('give').split(',').forEach((id) => giveItem(game.p, id)); } // use=아이템: 화면 점검용
+  if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(hashArgs.get('back') === '1'); } if (hashArgs.has('give')) hashArgs.get('give').split(',').forEach((id) => giveItem(game.p, id));
+    if (hashArgs.has('threat')) { throwShot('homing', game.ais[0], game.p); const s = game.shots[game.shots.length - 1]; s.s = kartProg(game.p) - 70 / game.T.segLen; s.sc = null; s.lat = game.p.lat; } } // threat=1: 뒤 70 에서 나를 노리는 물풍선 (경고 화면 점검용) // use=아이템: 화면 점검용
   if (hashArgs.get('pause') === '1') togglePause();
 } else if (hashArgs.has('showcase')) { showcase.setSpecies(hashArgs.get('showcase')); showcase.angle = +(hashArgs.get('ang') || 2.6); // 메뉴 캐릭터 화면 점검용
 } else if (hashArgs.has('intro')) { if (hashArgs.has('track')) settings.track = +hashArgs.get('track'); startRace(); game.introT = 1.2; step(0); } // #intro[&track=n]: 출발 전 연출 화면

@@ -21,6 +21,19 @@ function buildMinimap(T) {
   }
   return { bg, map, ctx: cv.getContext('2d'), W };
 }
+// 뒤에서 날아오는 공격 경고: 아이템 칸 왼쪽, 가까워질수록 막대가 차고 빨개짐, 첫 칸이 방패면 안내
+let warnBeep = 0, warnOn = false;
+function updateWarn(dt) {
+  const p = game.p, th = game.state === 'race' && !p.finished ? incomingThreat(p) : null;
+  $('warn').classList.toggle('hidden', !th);
+  if (!th) { warnOn = false; return; }
+  const k = 1 - th.dist / WARN_RANGE;
+  setText('warn-text', `⚠️ 뒤에서 ${th.icon}!${p.items[0] === 'shield' ? ' Space 로 🛡️!' : ''}`);
+  setStyle('warn-fill', 'width', `${Math.round(k * 100)}%`);
+  setStyle('warn-fill', 'background', k > 0.6 ? '#ff3b30' : '#ffb300');
+  if (!warnOn) { warnOn = true; warnBeep = 0; game.stats.warns = (game.stats.warns || 0) + 1; }
+  if ((warnBeep -= dt) <= 0) { Sound.sfx.warn(); warnBeep = th.dist < 40 ? 0.25 : 0.8; }
+}
 function drawMinimap() {
   const { bg, map, ctx, W } = game.minimap;
   ctx.clearRect(0, 0, W, W); ctx.drawImage(bg, 0, 0);
@@ -33,6 +46,7 @@ function drawMinimap() {
     ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#1d2b53'; ctx.stroke();
   };
   for (const a of game.ais) dot(a.pos, '#' + a.color.toString(16).padStart(6, '0'), 5);
+  for (const s of game.shots) if (s.owner !== game.p) dot(s.mesh.position, '#ff3b30', 3); // 다른 카트가 던진 공격 아이템
   dot(game.p.pos, '#ffffff', 7);
 }
 
@@ -95,6 +109,7 @@ function updateHUD(dt) {
   if (p.hint) fx.push('💡');
   setText('fx', fx.join(' '));
   setStyle('bubbles', 'opacity', p.bubble > 0 ? '1' : '0');
+  updateWarn(dt);
   if (bannerTimer > 0) { bannerTimer -= dt; if (bannerTimer <= 0) $('banner').className = ''; }
   if (tipTimer > 0) { tipTimer -= dt; if (tipTimer <= 0) $('tip').classList.add('hidden'); }
   if (flashTimer > 0) { flashTimer -= dt; if (flashTimer <= 0) $('feedback').classList.remove('show'); }

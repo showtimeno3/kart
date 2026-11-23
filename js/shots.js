@@ -102,6 +102,24 @@ function placeShot(s, dt) {
   s.mesh.rotation.y += dt * (s.kind === 'tornado' || s.kind === 'boomerang' ? 14 : 6);
 }
 
+// 나에게 날아오는 공격 (경고용): 나를 노리는 따라가는 아이템, 같은 길 뒤에서(부메랑은 앞에서 돌아오며) 다가오는 아이템. 120 안, 가장 가까운 것
+const WARN_RANGE = 120;
+function incomingThreat(k) {
+  let best = null;
+  for (const s of game.shots) {
+    if (s.owner === k || s.gone) continue;
+    let dist = null;
+    if (s.kind === 'homing' || s.kind === 'bee') {
+      if (s.target === k) dist = Math.hypot(s.mesh.position.x - k.pos.x, s.mesh.position.z - k.pos.z);
+    } else if (onSc(k) === !!s.sc) {
+      const d = (kartProg(k) - s.s) * game.T.segLen; // + 면 샷이 내 뒤
+      if (d * s.dir > 0) dist = Math.abs(d); // 나를 향해 오는 중
+    }
+    if (dist != null && dist <= WARN_RANGE && (!best || dist < best.dist)) best = { icon: ItemTable.ITEMS[s.kind].icon, dist };
+  }
+  return best;
+}
+
 function updateShots(dt, karts) {
   const sh = game.shots;
   for (let n = sh.length - 1; n >= 0; n--) {
