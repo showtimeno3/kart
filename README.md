@@ -79,19 +79,19 @@
 | `js/main.js` | 루프, 자동 점검(sim/bench/audiotest) |
 
 ## 점검
-- node 테스트: `node test/questions.test.js`, `node test/items.test.js`, `node test/tracks.test.js`, `node test/trackgen.test.js`, `node test/globals.test.js`
+- node 테스트: `node test/questions.test.js`, `node test/items.test.js`, `node test/items-hit.test.js`(방패·별·물풍선 맞음 처리), `node test/tracks.test.js`, `node test/trackgen.test.js`, `node test/globals.test.js`
   - `tracks.test.js`: 닫힌 고리, 도로끼리 겹침, 점프대·발판·문 위치, 지름길 조건(충분히 짧음, 본 도로와 떨어짐, 출구 뒤 문까지 100 이상)
-  - `globals.test.js`: 파일끼리 이름 겹침, 파일 600줄 이하
+  - `globals.test.js`: 파일끼리 이름 겹침(function 포함), 파일 600줄 이하
 - 자율주행 점검: `node test/sim.mjs` (headless 크롬으로 `index.html#sim=400` 기본 4가지를 돌려 결과 출력, 콘솔 오류가 있으면 실패)
   - 해시 인자는 순서 상관없음: `track`, `subject`, `level`, `difficulty`, `species`, `seed`(같은 시드 = 같은 결과), `drift=1`, `shortcut=1`(지름길로 달림)
-  - `--save 파일` / `--compare 파일`: 결과 저장·비교, `--swiftshader`: 그래픽카드 없이 소프트웨어 렌더링
+  - 컴퓨터가 한 프레임에 3 넘게 튀면(`aiJump`) 실패. `--save 파일` / `--compare 파일`: 결과 저장·비교, `--swiftshader`: 그래픽카드 없이 소프트웨어 렌더링
   - 예: `node test/sim.mjs "sim=400&track=3&shortcut=1"`, 성능: `node test/sim.mjs --swiftshader "bench&track=2&quality=low"`, 음악: `node test/sim.mjs audiotest`
 - 스크린샷: `node test/shot.mjs 출력.png "race=30&track=2"`
   - `race=초`: 그 시간까지 진행한 뒤 화면 유지 (`&pause=1` 일시정지, `&use=아이템` 그 아이템 사용)
   - `intro[&track=n]`: 출발 전 연출 화면, `showcase=종[&ang=각도]`: 메뉴 캐릭터 화면
 
 ## 점검 결과 (2026-11-23, 6차 확장)
-- node 테스트 5개 모두 통과
+- node 테스트 6개 모두 통과
 - 자율주행(정답 100%) 4트랙 × 산수·영어: 모두 2바퀴 완주, 콘솔 오류 0. 보통 난이도 1등, 어려움 2등. 한 경주에 아이템에 맞는 횟수 0~3
 - 지름길 주행(`shortcut=1`): 4트랙 모두 두 바퀴 모두 지름길 진입, 바퀴 수 정상
 - 아이템 12종: 여러 시드에서 컴퓨터가 12종 모두 사용, 방패 막기 동작
