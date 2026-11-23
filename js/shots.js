@@ -30,13 +30,10 @@ function throwShot(kind, k, target, dir = 1) {
   game.scene.add(mesh);
   game.shots.push({ kind, mesh, owner: k, target, dir, s: kartProg(k) + (4 * dir) / T.segLen, sc, lat: k.lat, latV, age: 0,
     phase: 'out', hitSet: new Set(), gone: false });
-  if (kind === 'bee') { // 모두에게 알림: 큰 소리와 화면 가운데 글귀
-    Sound.sfx.buzz();
-    showBanner(`🐝 벌떼 출동! → ${target === game.p ? '나' : target ? target.name : '1등'}`, 2.2);
-  } else if (me) {
+  if (me) { // 다른 플레이어는 날아가는 모습으로 알고, 노림을 받는 1등은 경고로 앎
     const say = { homing: '따라가는 물풍선! 🎯', bee: '벌떼 출동! 🐝', tornado: '회오리! 🌀', boomerang: '부메랑! 🪃' }[kind] || (dir < 0 ? '뒤로 물풍선! 🎈' : '물풍선! 🎈');
     flash(say, 'info');
-    (kind === 'tornado' ? Sound.sfx.whoosh : kind === 'boomerang' ? Sound.sfx.swish : Sound.sfx.throw)();
+    (kind === 'bee' ? Sound.sfx.buzz : kind === 'tornado' ? Sound.sfx.whoosh : kind === 'boomerang' ? Sound.sfx.swish : Sound.sfx.throw)();
   }
 }
 
@@ -120,7 +117,9 @@ function incomingThreat(k) {
       const d = (kartProg(k) - s.s) * game.T.segLen; // + 면 샷이 내 뒤
       if (d * s.dir > 0) { dist = Math.abs(d); front = d < 0; } // 나를 향해 오는 중 (앞에서 오면 front)
     }
-    if (dist != null && dist <= WARN_RANGE && (!best || dist < best.dist)) best = { icon: ItemTable.ITEMS[s.kind].icon, dist, front };
+    const bee = s.kind === 'bee' && dist != null; // 벌떼는 노리는 1등에게 거리와 상관없이 경고
+    if (dist != null && (bee || dist <= WARN_RANGE) && (!best || bee || dist < best.dist)) best = { icon: ItemTable.ITEMS[s.kind].icon, dist, front, bee };
+    if (best && best.bee) break;
   }
   return best;
 }

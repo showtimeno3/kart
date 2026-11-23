@@ -163,6 +163,12 @@ function setup(...ais) {
   assert.strictEqual(ctx.incomingThreat(k), null, '앞으로 멀어지는 물풍선에 경고');
   ctx.game.shots = [shot({ kind: 'balloon', s: 940, owner: k })];
   assert.strictEqual(ctx.incomingThreat(k), null, '내가 던진 것에 경고');
+  // 벌떼는 노리는 1등에게 거리와 상관없이 경고 (출동한 순간부터)
+  ctx.game.shots = [shot({ kind: 'bee', target: k, mesh: { position: { x: 800, y: 10, z: 0 } } })];
+  const wb = ctx.incomingThreat(k);
+  assert.ok(wb && wb.bee, '멀리서 오는 벌떼에 경고 없음');
+  ctx.game.shots = [shot({ kind: 'bee', target: o, mesh: { position: { x: 5, y: 10, z: 0 } } })];
+  assert.strictEqual(ctx.incomingThreat(k), null, '나를 노리지 않는 벌떼에 경고');
 }
 // 경고 중에도 Space 는 첫 칸 (방패가 둘째 칸이면 방패를 쓰지 않음)
 {

@@ -94,7 +94,8 @@ if (simMode) {
   for (const k of ['subject', 'species']) if (hashArgs.has(k)) settings[k] = hashArgs.get(k);
   startRace(); simulate(+hashArgs.get(simMode));
   if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(hashArgs.get('back') === '1'); } if (hashArgs.has('give')) hashArgs.get('give').split(',').forEach((id) => giveItem(game.p, id));
-    if (hashArgs.has('threat')) { throwShot('homing', game.ais[0], game.p); const s = game.shots[game.shots.length - 1]; s.s = kartProg(game.p) - 70 / game.T.segLen; s.sc = null; s.lat = game.p.lat; } } // threat=1: 뒤 70 에서 나를 노리는 물풍선 (경고 화면 점검용) // use=아이템: 화면 점검용
+    if (hashArgs.get('threat') === 'bee') throwShot('bee', game.ais[game.ais.length - 1], game.p); // threat=bee: 나를 노리는 벌떼
+    else if (hashArgs.has('threat')) { throwShot('homing', game.ais[0], game.p); const s = game.shots[game.shots.length - 1]; s.s = kartProg(game.p) - 70 / game.T.segLen; s.sc = null; s.lat = game.p.lat; } } // threat=1: 뒤 70 에서 나를 노리는 물풍선 (경고 화면 점검용) // use=아이템: 화면 점검용
   if (hashArgs.get('pause') === '1') togglePause();
 } else if (hashArgs.has('showcase')) { showcase.setSpecies(hashArgs.get('showcase')); showcase.angle = +(hashArgs.get('ang') || 2.6); // 메뉴 캐릭터 화면 점검용
 } else if (hashArgs.has('intro')) { if (hashArgs.has('track')) settings.track = +hashArgs.get('track'); startRace(); game.introT = 1.2; step(0); } // #intro[&track=n]: 출발 전 연출 화면
