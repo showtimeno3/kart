@@ -12,7 +12,7 @@ function updateAIs(dt) {
     if (a.spin > 0) a.spin -= dt;
     let target = racing ? a.base * (a.boost > 0 ? 1.35 : 1) * (a.slow > 0 ? 0.6 : 1) * (a.spin > 0 ? 0.25 : 1) * (a.sticky > 0 ? 0.5 : 1) * (SURF_SPEED[a.sc ? T.sc.surf : T.surf[a.idx]] || 1) : 0;
     const gap = aiTotal(a) - pt; // 고무줄: 격차가 크면 조금 조절
-    if (!p.finished) { if (gap > 160) target *= 0.88; else if (gap < -160) target *= 1.12; }
+    if (!p.finished) { if (gap > 160) target *= 0.88; else if (gap < -120) target *= 1.15; } // 뒤처지면 따라붙음
     a.speed = approach(a.speed, target, (target > a.speed ? 10 : 25) * dt);
     const prev = a.idx, sc = T.sc;
     if (a.sc) { // 지름길: 지름길 거리만큼 가면 본 도로 갈림점 사이 거리만큼 진행한 것으로 셈

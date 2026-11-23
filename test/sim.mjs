@@ -19,7 +19,7 @@ for (let i = 0; i < args.length; i++) {
   else if (args[i] === '--swiftshader') extra = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--window-size=1280,720']; // 그래픽카드 없이 소프트웨어 렌더링
   else hashes.push(args[i]);
 }
-if (!hashes.length) hashes.push('sim=400&track=0', 'sim=400&track=1', 'sim=400&track=0&subject=english', 'sim=400&track=1&drift=1');
+if (!hashes.length) hashes.push('sim=600&track=0', 'sim=600&track=1', 'sim=600&track=0&subject=english', 'sim=600&track=1&drift=1');
 
 const page = pathToFileURL(resolve(import.meta.dirname, '..', 'index.html')).href;
 

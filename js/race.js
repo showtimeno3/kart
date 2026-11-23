@@ -6,7 +6,7 @@ function startRace() {
   const def = TRACKS[settings.track];
   saveSettings();
   Sound.init();
-  const DIFF = [{ speed: 0.88, skill: 0.5 }, { speed: 1, skill: 0.68 }, { speed: 1.09, skill: 0.85 }][settings.difficulty] || { speed: 1, skill: 0.68 };
+  const DIFF = [{ speed: 0.97, skill: 0.55 }, { speed: 1.07, skill: 0.73 }, { speed: 1.13, skill: 0.9 }][settings.difficulty] || { speed: 1.07, skill: 0.73 }; // 쉬움, 보통, 어려움
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(def.fog || def.skyBottom, 320, 1700);
   scene.userData.fogColor = def.fog || def.skyBottom;
