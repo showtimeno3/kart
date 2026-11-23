@@ -75,7 +75,6 @@ const Sound = (() => {
     splat() { noise(0.35, 0.4, 1600); tone(300, 0.25, 'sine', 0.1, 0, -150); },
     shield() { tone(520, 0.12, 'triangle', 0.14); tone(780, 0.25, 'triangle', 0.14, 0.08); },
     block() { tone(1200, 0.2, 'triangle', 0.16, 0, -400); },
-    magnet() { tone(300, 0.5, 'sawtooth', 0.06, 0, 400); },
     honey() { tone(180, 0.4, 'sine', 0.16, 0, -60); },
     ice() { [1500, 1900, 2300].forEach((f, i) => tone(f, 0.12, 'triangle', 0.08, i * 0.05)); },
     bubble() { [700, 1100, 850, 1300, 950].forEach((f, i) => tone(f, 0.06, 'sine', 0.1, i * 0.07)); },

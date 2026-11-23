@@ -105,7 +105,7 @@ function updateHUD(dt) {
     while (game.tutorial.length && game.t >= game.tutorial[0][0]) flashTip(game.tutorial.shift()[1], 6);
   }
   // 아이템 지속 효과 표시 (남은 초) + 비눗방울 화면 가장자리
-  const fx = [['shield', '🛡️'], ['star', '🌈'], ['magnet', '🧲'], ['sticky', '🍯'], ['bubble', '🫧']].filter(([f]) => p[f] > 0).map(([f, i]) => `${i}${Math.ceil(p[f])}`);
+  const fx = [['shield', '🛡️'], ['star', '🌈'], ['sticky', '🍯'], ['bubble', '🫧']].filter(([f]) => p[f] > 0).map(([f, i]) => `${i}${Math.ceil(p[f])}`);
   if (p.hint) fx.push('💡');
   setText('fx', fx.join(' '));
   setStyle('bubbles', 'opacity', p.bubble > 0 ? '1' : '0');

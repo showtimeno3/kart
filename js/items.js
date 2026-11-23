@@ -25,7 +25,7 @@ const onSc = (k) => (k === game.p ? !!game.p.onSc : !!k.sc); // 지름길 위에
 const scDist = (k) => (k === game.p ? game.p.scK * game.T.sc.step : k.sc.s); // 지름길 시작부터 간 거리
 
 function resetEffects(k) {
-  Object.assign(k, { items: [], charges: 0, shield: 0, star: 0, magnet: 0, sticky: 0, bubble: 0, bubbleT: 0, hint: false, itemHeld: 0, itemT: 0, shieldMesh: null });
+  Object.assign(k, { items: [], charges: 0, shield: 0, star: 0, sticky: 0, bubble: 0, bubbleT: 0, hint: false, itemHeld: 0, itemT: 0, shieldMesh: null });
 }
 function countUse(id, me) {
   const s = game.stats.items;
@@ -106,7 +106,6 @@ function useItemFor(k, back = false) {
   else if (id === 'homing') throwShot('homing', k, kartAhead(k)[0]);
   else if (id === 'bee') throwShot('bee', k, leaderOf(k));
   else if (id === 'tornado' || id === 'boomerang') throwShot(id, k, null);
-  else if (id === 'magnet') { k.magnet = 3; if (me) { flash('자석! 🧲', 'info'); Sound.sfx.magnet(); } }
   else if (id === 'bubble') {
     for (const o of allKarts()) if (o !== k && kartProg(o) > kartProg(k)) hitKart(o, 'bubble', null, true);
     if (me) { flash('비눗방울 구름! 🫧', 'info'); Sound.sfx.bubble(); }
@@ -172,16 +171,7 @@ function updateItems(dt) {
   // 지속 효과
   for (const k of karts) {
     const me = k === game.p;
-    for (const f of ['shield', 'star', 'magnet', 'sticky', 'bubble']) k[f] = Math.max(0, k[f] - dt);
-    if (k.magnet > 0) {
-      const [t, gap] = kartAhead(k);
-      if (t && gap < 120 && onSc(t) === onSc(k)) { // 같은 길에 있을 때만 끌려감
-        k.boost = Math.max(k.boost, 0.15);
-        if (me) { const rv = k.onSc ? T.sc.right[k.scK] : T.right[k.idx], d = clamp(t.lat - k.lat, -1, 1) * 8 * dt; k.pos.addScaledVector(rv, d); }
-        else k.latT = t.lat;
-        if (Math.random() < 0.4) Particles.emit(kartPoint(k.kart, 0, 1.2, 2.5), { color: 0xff5a7a, vx: 0, vy: 0, life: 0.3, size: 0.5, add: true });
-      }
-    }
+    for (const f of ['shield', 'star', 'sticky', 'bubble']) k[f] = Math.max(0, k[f] - dt);
     if (k.star > 0) {
       k.boost = Math.max(k.boost, 0.15);
       if (Math.random() < 0.8) Particles.emit(kartPoint(k.kart, (Math.random() - 0.5) * 3, 0.5 + Math.random() * 2, -1), { color: [0xff6fa8, 0xffd84d, 0x7dff8a, 0x4fc3ff, 0xb57bff][Math.floor(Math.random() * 5)], vy: 2, life: 0.4, size: 0.5, add: true });
@@ -234,7 +224,6 @@ function aiUseItems(a, dt) {
   } else if (id === 'homing' || id === 'tornado' || id === 'boomerang') use = canHit;
   else if (id === 'bee') use = a.itemHeld > a.itemT && !!leaderOf(a); // 내가 1등이면 들고 있음
   else if (id === 'bubble') use = !!ahead && gapA < 80;
-  else if (id === 'magnet') use = !!ahead && gapA < 120;
   else if (id === 'banana' || id === 'honey') use = a.persona === 'prank' ? a.itemHeld > 1 : !!behind && gapB < 60;
   else if (id === 'shield') { const th = incomingThreat(a); use = !!th && th.dist <= (a.persona === 'steady' ? 120 : 30); } // 위협 없으면 계속 들고 있음
   else use = a.itemHeld > a.itemT; // 부스터, 무지개 별, 힌트

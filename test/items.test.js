@@ -2,7 +2,7 @@
 const assert = require('assert');
 const T = require('../js/itemtable.js');
 
-const IDS = ['boost', 'banana', 'boost3', 'shield', 'balloon', 'homing', 'magnet', 'honey', 'ice', 'bubble', 'star', 'hint', 'bee', 'tornado', 'boomerang'];
+const IDS = ['boost', 'banana', 'boost3', 'shield', 'balloon', 'homing', 'honey', 'ice', 'bubble', 'star', 'hint', 'bee', 'tornado', 'boomerang'];
 assert.deepStrictEqual(Object.keys(T.ITEMS), IDS);
 for (const id of IDS) {
   const it = T.ITEMS[id];
@@ -32,10 +32,10 @@ assert.ok(dist(1, { combo: 3 }).boomerang > 0, '콤보 3 의 1등이 2~3등 표�
 // 꼴찌에 바나나 없음, 벌떼는 1등·2~3등에서는 안 나옴 (중간부터, 사용자 결정)
 assert.ok(!dist(8).banana);
 assert.ok(!dist(2).bee && dist(4).bee > 0 && dist(6).bee > 0 && dist(8).bee > 0);
-// 15종 모두 어딘가에서 나옴
+// 14종 모두 어딘가에서 나옴 (자석은 사용자 결정으로 뺌)
 const seen = new Set();
 for (let r = 1; r <= 8; r++) Object.keys(dist(r)).forEach((id) => seen.add(id));
-assert.strictEqual(seen.size, 15);
+assert.strictEqual(seen.size, 14);
 // 힌트는 어느 순위에서나
 for (let r = 1; r <= 8; r++) assert.ok(dist(r).hint > 0, `${r}등 힌트 없음`);
 console.log('items: all tests passed');
