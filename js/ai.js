@@ -8,7 +8,7 @@ function updateAIs(dt) {
   const { ais, T, A, p } = game;
   const pt = playerTotal(), racing = game.state === 'race';
   for (const a of ais) {
-    a.boost = Math.max(0, a.boost - dt); a.slow = Math.max(0, a.slow - dt); a.padCd = Math.max(0, a.padCd - dt);
+    a.boost = Math.max(0, a.boost - dt); a.slow = Math.max(0, a.slow - dt); a.padCd = Math.max(0, a.padCd - dt); a.mvCd = Math.max(0, (a.mvCd || 0) - dt);
     if (a.spin > 0) a.spin -= dt;
     let target = racing ? a.base * (a.boost > 0 ? 1.35 : 1) * (a.slow > 0 ? 0.6 : 1) * (a.spin > 0 ? 0.25 : 1) * (a.sticky > 0 ? 0.5 : 1) * (SURF_SPEED[a.sc ? T.sc.surf : T.surf[a.idx]] || 1) : 0;
     const gap = aiTotal(a) - pt; // 고무줄: 격차가 크면 조금 조절
@@ -126,11 +126,18 @@ function updateMovers(dt) {
     }
     const dx = p.pos.x - m.pos.x, dz = p.pos.z - m.pos.z, dd = Math.hypot(dx, dz);
     if (dd < 3.4 && m.cd === 0 && p.air < 1.5) {
-      m.cd = 1; p.vel.multiplyScalar(0.3); p.vel.x += (dx / dd) * 6; p.vel.z += (dz / dd) * 6; p.slow = Math.max(p.slow, 0.8);
-      p.shake = 0.7; Sound.sfx.bump(); flash({ sheep: '음매~ 🐑', crab: '집게! 🦀', snowball: '눈덩이! ☃️' }[m.kind] || '쿵! 🪨', 'bad');
-      if (m.kind === 'sheep') Sound.sfx.baa();
-      if (p.drift.on) endDrift(false);
+      m.cd = 1;
+      if (!blocked(p)) { // 무지개 별·방패는 장애물도 막음
+        p.vel.multiplyScalar(0.3); p.vel.x += (dx / dd) * 6; p.vel.z += (dz / dd) * 6; p.slow = Math.max(p.slow, 0.8);
+        p.shake = 0.7; Sound.sfx.bump(); flash({ sheep: '음매~ 🐑', crab: '집게! 🦀', snowball: '눈덩이! ☃️' }[m.kind] || '쿵! 🪨', 'bad');
+        if (m.kind === 'sheep') Sound.sfx.baa();
+        if (p.drift.on) endDrift(false);
+      }
     }
-    for (const a of ais) if (Math.hypot(a.pos.x - m.pos.x, a.pos.z - m.pos.z) < 3.4 && a.slow <= 0) { a.slow = 0.8; a.latV += Math.sign(a.lat - lat || 1) * 8; }
+    for (const a of ais) {
+      if (a.mvCd > 0 || a.slow > 0 || Math.hypot(a.pos.x - m.pos.x, a.pos.z - m.pos.z) >= 3.4) continue;
+      a.mvCd = 1; // 같은 장애물에 겹친 동안 방패가 매 프레임 닳지 않게
+      if (!blocked(a)) { a.slow = 0.8; a.latV += Math.sign(a.lat - lat || 1) * 8; }
+    }
   }
 }

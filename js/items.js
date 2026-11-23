@@ -30,17 +30,22 @@ function countUse(id, me) {
   (s[id] = s[id] || [0, 0])[me ? 0 : 1]++;
 }
 
-// 맞음: 무지개 별이면 무시, 방패가 있으면 막고 방패가 사라짐
+// 막힘: 무지개 별이면 막음, 방패가 있으면 한 번 막고 방패가 사라짐 (아이템·움직이는 장애물 공통)
+function blocked(k) {
+  if (k.star > 0) return true;
+  if (k.shield <= 0) return false;
+  k.shield = 0; game.stats.shieldBlocks++;
+  Particles.burst(kartPoint(k.kart, 0, 1.4, 0), 18, 0x7fd4ff, 8);
+  if (k === game.p) { flash('방패로 막았어요! 🛡️', 'good'); Sound.sfx.block(); }
+  return true;
+}
+
+// 맞음: 막히면 false, 아니면 효과를 주고 true
 function hitKart(k, effect, msg) {
-  if (k.star > 0 || k.finished) return false;
+  if (k.finished) return false;
   const me = k === game.p;
-  const hs = game.stats.hits; hs[effect] = (hs[effect] || 0) + 1; // 점검용: 효과별 맞은 횟수 (방패로 막은 것 포함)
-  if (k.shield > 0) {
-    k.shield = 0; game.stats.shieldBlocks++;
-    Particles.burst(kartPoint(k.kart, 0, 1.4, 0), 18, 0x7fd4ff, 8);
-    if (me) { flash('방패로 막았어요! 🛡️', 'good'); Sound.sfx.block(); }
-    return false;
-  }
+  const hs = game.stats.hits; hs[effect] = (hs[effect] || 0) + 1; // 점검용: 효과별 맞은 횟수 (막은 것 포함)
+  if (blocked(k)) return false;
   if (effect === 'spin') {
     k.spin = me ? 1.1 : 1.0;
     if (me) { flash(msg || '미끄덩!', 'bad'); Sound.sfx.spin(); game.stats.spins = (game.stats.spins || 0) + 1; if (k.drift.on) endDrift(false); }
@@ -89,7 +94,7 @@ function useItemFor(k) {
   else if (id === 'bubble') {
     for (const o of allKarts()) if (o !== k && kartProg(o) > kartProg(k)) hitKart(o, 'bubble');
     if (me) { flash('비눗방울 구름! 🫧', 'info'); Sound.sfx.bubble(); }
-  } else if (id === 'star') { k.star = 6; if (me) { flash('무지개 별! 🌈', 'info'); Sound.sfx.star(); } }
+  } else if (id === 'star') { k.star = 6; k.starHit = new Set(); if (me) { flash('무지개 별! 🌈', 'info'); Sound.sfx.star(); } }
   else if (id === 'hint') {
     k.hint = true;
     if (me) { Sound.sfx.hint(); if (game.nextGate && game.nextGate.q) applyHint(game.nextGate); else flash('💡 다음 문제에서 오답 하나를 지워 줄게요', 'info'); }
@@ -160,10 +165,7 @@ function updateItems(dt) {
     if (k.star > 0) {
       k.boost = Math.max(k.boost, 0.15);
       if (Math.random() < 0.8) Particles.emit(kartPoint(k.kart, (Math.random() - 0.5) * 3, 0.5 + Math.random() * 2, -1), { color: [0xff6fa8, 0xffd84d, 0x7dff8a, 0x4fc3ff, 0xb57bff][Math.floor(Math.random() * 5)], vy: 2, life: 0.4, size: 0.5, add: true });
-      for (const o of karts) {
-        if (o === k || o.spin > 0) continue;
-        if (Math.hypot(o.pos.x - k.pos.x, o.pos.z - k.pos.z) < 3.2 && Math.abs(o.y - k.y) < 2.5) hitKart(o, 'spin', '쿵! 🌈');
-      }
+      starBump(k, karts);
     }
     if (!me && k.bubble > 0 && (k.bubbleT -= dt) <= 0) { k.bubbleT = 1; k.latT = (Math.random() * 2 - 1) * 12; } // 앞이 안 보여 흔들림
     // 방패 공
@@ -222,6 +224,14 @@ function dangerNear(a) {
     if (h.owner !== a && dx * dx + dz * dz < 25 * 25) return true;
   }
   return false;
+}
+
+// 무지개 별: 부딪힌 카트를 돌게 함. 별 한 번에 같은 카트는 한 번만 (방패로 막은 다음 프레임에 다시 맞지 않게)
+function starBump(k, karts) {
+  for (const o of karts) {
+    if (o === k || k.starHit.has(o)) continue;
+    if (Math.hypot(o.pos.x - k.pos.x, o.pos.z - k.pos.z) < 3.2 && Math.abs(o.y - k.y) < 2.5) { k.starHit.add(o); hitKart(o, 'spin', '쿵! 🌈'); }
+  }
 }
 
 // 컴퓨터 아이템 쓰기: 앞 카트가 가까우면 공격, 뒤 카트가 가까우면 함정, 나머지는 잠깐 뒤
