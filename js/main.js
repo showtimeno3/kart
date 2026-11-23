@@ -61,6 +61,7 @@ function simulate(seconds) {
   let vSum = 0, steps = 0, airMax = 0;
   for (let k = 0; k < seconds * 30 && game.state !== 'done'; k++) {
     autopilot();
+    if (p.item && p.rolling <= 0) useItem(); // 아이템은 들자마자 사용
     if (simDrift) keys.drift = Math.abs(T.curv[(p.idx + 8) % N]) > 0.16 && p.vF > 22; // 드리프트 경로 점검용
     if (!simDrift && p.air > 0.5 && p.canTrick) press('drift'); // 트릭 경로 점검용
     else if (!simDrift) keys.drift = false;
@@ -73,7 +74,7 @@ function simulate(seconds) {
   console.log('SIM ' + JSON.stringify({ state: game.state, t: game.t.toFixed(1), laps: p.laps, rank: p.rank,
     stats: game.stats.total + '/' + game.stats.correct, drifts: game.stats.drifts || 0, walls: game.stats.walls || 0, spins: game.stats.spins || 0,
     miss: game.stats.wrong.map((w) => w.want + ':' + w.lat), len: Math.round(T.length), gateGaps: gaps,
-    airMax: +airMax.toFixed(1), avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
+    airMax: +airMax.toFixed(1), items: game.stats.items, shieldBlocks: game.stats.shieldBlocks, hits: game.stats.hits, avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
 }
 window.__eduKart = { get game() { return game; }, startRace, settings, Sound };
 
@@ -84,7 +85,7 @@ if (simMode) {
   for (const k of ['track', 'level', 'difficulty']) if (hashArgs.has(k)) settings[k] = +hashArgs.get(k);
   for (const k of ['subject', 'species']) if (hashArgs.has(k)) settings[k] = hashArgs.get(k);
   startRace(); simulate(+hashArgs.get(simMode));
-  if (simMode === 'race') { keys.up = true; }
+  if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(); } } // use=아이템: 화면 점검용
   if (hashArgs.get('pause') === '1') togglePause();
 } else if (location.hash === '#intro') { startRace(); game.introT = 1.2; step(0); }
 else if (/^#bench/.test(location.hash)) { // #bench[&track=n][&quality=low]: 실제 시간 성능 측정

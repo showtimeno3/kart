@@ -8,7 +8,6 @@ const MAX_SPEED = 38, BOOST_MUL = 1.4, G = 30, KMH = 3.2;
 const LANE_COLORS = ['#e74c3c', '#2e86de', '#1e8449'];
 const FONT = "'Jua', 'Malgun Gothic', sans-serif";
 const SPECIES_KEYS = Object.keys(M.SPECIES);
-const ITEM_ICON = { boost: '🚀', banana: '🍌' };
 
 const $ = (id) => document.getElementById(id);
 const textCache = {};

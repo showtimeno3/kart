@@ -65,6 +65,15 @@ button { font-family: var(--font); }
 #item { width: 92px; height: 92px; border: 5px solid var(--navy); border-radius: 20px; background: var(--cream); color: var(--navy);
   font-size: 54px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 0 rgba(29,43,83,.45); }
 #item.rolling { animation: shake .1s infinite; }
+#item { position: relative; }
+#item .cnt { position: absolute; right: 6px; bottom: 2px; font-size: 22px; color: var(--navy); }
+#fx { position: absolute; right: 0; bottom: calc(100% + 8px); font-size: 22px; color: #fff; white-space: nowrap; text-shadow: 0 2px 0 var(--navy), 0 0 6px rgba(0,0,0,.4); }
+.choice.off { background: #9aa0a6 !important; opacity: .55; text-decoration: line-through; }
+/* 비눗방울 구름: 가장자리만 덮고 가운데(문제 카드, 차)는 비움 */
+#bubbles { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(circle at 8% 20%, rgba(255,255,255,.75) 0 5%, transparent 5.5%), radial-gradient(circle at 92% 70%, rgba(255,255,255,.7) 0 6%, transparent 6.5%),
+    radial-gradient(circle at 15% 85%, rgba(255,255,255,.7) 0 7%, transparent 7.5%), radial-gradient(circle at 88% 15%, rgba(255,255,255,.65) 0 4%, transparent 4.5%),
+    radial-gradient(ellipse at center, transparent 55%, rgba(200,235,255,.85) 78%); }
 @keyframes shake { 50% { transform: rotate(6deg) scale(1.05); } }
 #countdown { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 150px; color: var(--yellow); text-shadow: var(--stroke); }
 #countdown.tick { animation: tick .9s ease-out; }

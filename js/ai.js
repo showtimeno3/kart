@@ -9,7 +9,7 @@ function updateAIs(dt) {
   for (const a of ais) {
     a.boost = Math.max(0, a.boost - dt); a.slow = Math.max(0, a.slow - dt); a.padCd = Math.max(0, a.padCd - dt);
     if (a.spin > 0) a.spin -= dt;
-    let target = racing ? a.base * (a.boost > 0 ? 1.35 : 1) * (a.slow > 0 ? 0.6 : 1) * (a.spin > 0 ? 0.25 : 1) : 0;
+    let target = racing ? a.base * (a.boost > 0 ? 1.35 : 1) * (a.slow > 0 ? 0.6 : 1) * (a.spin > 0 ? 0.25 : 1) * (a.sticky > 0 ? 0.5 : 1) : 0;
     const gap = aiTotal(a) - pt; // 고무줄: 격차가 크면 조금 조절
     if (!p.finished) { if (gap > 160) target *= 0.88; else if (gap < -160) target *= 1.12; }
     a.speed = approach(a.speed, target, (target > a.speed ? 10 : 25) * dt);
@@ -22,7 +22,7 @@ function updateAIs(dt) {
     if (g && dist < 110 && a.planGate !== g) {
       a.planGate = g;
       if (g.q) {
-        a.planLane = Math.random() < a.skill ? g.q.answer : (g.q.answer + 1 + Math.floor(Math.random() * 2)) % 3;
+        a.planLane = Math.random() < a.skill + (a.hint ? 0.25 : 0) ? g.q.answer : (g.q.answer + 1 + Math.floor(Math.random() * 2)) % 3;
         a.latT = [-LANE, 0, LANE][a.planLane];
       } else a.planLane = -1;
     }
@@ -30,19 +30,15 @@ function updateAIs(dt) {
       if (!crossed(prev, a.idx, gg.i)) continue;
       const ok = gg.q && a.planGate === gg && a.planLane >= 0 ? laneOf(a.lat) === gg.q.answer : Math.random() < a.skill;
       if (ok) a.boost = 1.3; else a.slow = 1.0;
-      a.planGate = null; a.latT = (Math.random() * 2 - 1) * 12;
+      a.planGate = null; a.hint = false; a.latT = (Math.random() * 2 - 1) * 12;
     }
     for (const pd of A.pads) if (a.padCd === 0 && inRange(a.idx, pd.i0 - 4, 8) && Math.abs(a.lat - pd.lat) < 5) { a.boost = Math.max(a.boost, 1.0); a.padCd = 0.6; }
     for (const r of A.ramps) if (crossed(prev, a.idx, r.i1) && Math.abs(a.lat - r.lat) < r.w / 2) a.vy = 8 + r.h * 2 + a.speed * 0.08;
     a.latV = damp(a.latV, (a.latT - a.lat) * 1.4, 3.5, dt);
     a.lat = clamp(a.lat + a.latV * dt, -(HW - 1.5), HW - 1.5);
-    if (racing && a.item && (a.itemT -= dt) <= 0) { // 컴퓨터도 주운 아이템을 씀
-      if (a.item === 'boost') a.boost = Math.max(a.boost, 1.6); else dropBanana(kartPoint(a.kart, 0, 0, -3.2), a);
-      a.item = null;
-    }
     if (racing) {
       a.banana -= dt;
-      if (a.banana <= 0) { a.banana = 14 + Math.random() * 16; dropBanana(kartPoint(a.kart, 0, 0, -3.2), a); }
+      if (a.banana <= 0) { a.banana = 14 + Math.random() * 16; dropHazard('banana', a); }
     }
     if (!a.finished && aiTotal(a) >= LAPS * N) { a.finished = true; a.finishTime = game.t; }
 

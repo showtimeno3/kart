@@ -197,6 +197,31 @@
     return g;
   }
 
+  // ---------- 아이템 ----------
+  function waterBalloon(color) { // 물풍선 (던지는 것)
+    const g = new THREE.Group();
+    part(new THREE.SphereGeometry(0.9, 14, 10), toon(color), g, 0, 0, 0, { s: [1, 1.15, 1], outline: 1.06 });
+    part(new THREE.ConeGeometry(0.22, 0.35, 8), toon(color), g, 0, 1.05, 0, { rx: Math.PI, cast: false });
+    part(new THREE.SphereGeometry(0.22, 8, 6), toon(0xffffff), g, -0.32, 0.35, 0.55, { cast: false });
+    return g;
+  }
+  function honeyPuddle() { // 꿀 웅덩이 (바닥에 넓게)
+    const g = new THREE.Group();
+    const m = new THREE.MeshToonMaterial({ color: 0xf2a91a, transparent: true, opacity: 0.92, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+    const d = new THREE.Mesh(new THREE.CircleGeometry(4.5, 24), m); d.rotation.x = -Math.PI / 2; d.position.y = 0.14; g.add(d);
+    for (let k = 0; k < 5; k++) { const a = k * 1.3; part(new THREE.SphereGeometry(0.5 + (k % 2) * 0.3, 8, 6), toon(0xffc93c), g, Math.cos(a) * 2.6, 0.15, Math.sin(a) * 2.6, { s: [1, 0.35, 1], cast: false }); }
+    return g;
+  }
+  function iceWall() { // 얼음 벽 (도로를 가로로 막는 작은 벽)
+    const g = new THREE.Group();
+    const m = new THREE.MeshToonMaterial({ color: 0xbfe9ff, transparent: true, opacity: 0.85 });
+    for (let k = -1; k <= 1; k++) part(new THREE.BoxGeometry(1.9, 2.4 + (k === 0 ? 0.5 : 0), 1.3), m, g, k * 1.85, 1.2, 0, { outline: 1.04 });
+    return g;
+  }
+  function shieldBubble() { // 방패: 카트를 감싸는 투명한 공
+    return new THREE.Mesh(new THREE.SphereGeometry(2.6, 20, 14), new THREE.MeshBasicMaterial({ color: 0x7fd4ff, transparent: true, opacity: 0.28, depthWrite: false }));
+  }
+
   // ---------- 배경 장식 ----------
   const GREENS = [0x3fa34d, 0x4cb85c, 0x2f8f43, 0x5cc46a];
   const pickOf = (a) => a[Math.floor(Math.random() * a.length)];
@@ -367,6 +392,6 @@
     });
   }
 
-  root.Models = { SPECIES, toon, part, makeKart, makeBanana, tree, pine, bush, rock, cactus, mesa, cloud, mountain, grandstand, OUTLINE,
+  root.Models = { SPECIES, toon, part, makeKart, makeBanana, waterBalloon, honeyPuddle, iceWall, shieldBubble, tree, pine, bush, rock, cactus, mesa, cloud, mountain, grandstand, OUTLINE,
     sheep, boulder, windmill, balloon, ramp, instanceScatter, billboard };
 })(this);

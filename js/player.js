@@ -16,7 +16,7 @@ function updatePlayer(dt) {
   const racing = game.state === 'race' && !p.finished;
   const ctrl = racing && p.spin <= 0;
   const onGround = p.air < 0.05;
-  const steerIn = ctrl ? (keys.left ? 1 : 0) - (keys.right ? 1 : 0) : 0;
+  const steerIn = (ctrl ? (keys.left ? 1 : 0) - (keys.right ? 1 : 0) : 0) * (p.bubble > 0 ? 0.5 : 1); // 비눗방울: 핸들이 둔해짐
   const gas = ctrl && (keys.up || touchMode);
   const brake = ctrl && keys.down;
   // 핸들 입력은 즉시 반응, 대신 최대로 꺾이는 정도를 낮춤
@@ -27,7 +27,7 @@ function updatePlayer(dt) {
   const fx = Math.sin(p.h), fz = Math.cos(p.h), rx = -fz, rz = fx;
   let vF = p.vel.x * fx + p.vel.z * fz, vR = p.vel.x * rx + p.vel.z * rz;
   const offroad = onGround && Math.abs(p.lat) > HW + 0.8;
-  const max = MAX_SPEED * (p.boost > 0 ? BOOST_MUL : 1) * (p.slow > 0 ? 0.6 : 1) * (offroad && p.boost <= 0 ? 0.6 : 1) * (p.wet > 0 ? 0.85 : 1);
+  const max = MAX_SPEED * (p.boost > 0 ? BOOST_MUL : 1) * (p.slow > 0 ? 0.6 : 1) * (offroad && p.boost <= 0 ? 0.6 : 1) * (p.wet > 0 ? 0.85 : 1) * (p.sticky > 0 ? 0.5 : 1);
   if (onGround) {
     if (p.boost > 0) vF = Math.min(max, vF + 55 * dt);
     else if (gas) vF += 17 * Math.max(0.1, 1 - vF / max) * dt; // 빠를수록 가속이 줄어듦

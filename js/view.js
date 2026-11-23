@@ -33,7 +33,8 @@ function updateKartMeshes() {
 }
 
 function updateWorld(dt) {
-  const { p, ais, boxes, bananas, scene, deco } = game;
+  const { p, ais, boxes, scene, deco } = game;
+  const total = ais.length + 1;
   for (const b of boxes) {
     b.mesh.rotation.y += dt * 1.4; b.mesh.rotation.x += dt * 0.6;
     b.mesh.position.y = b.baseY + Math.sin(game.t * 2.5 + b.phase) * 0.35;
@@ -45,31 +46,18 @@ function updateWorld(dt) {
     }
     for (const a of ais) if (b.mesh.visible && b.mesh.position.distanceTo(tmpV.set(a.pos.x, a.y + 1.6, a.pos.z)) < 3) {
       b.respawn = 4; b.mesh.visible = false;
-      if (!a.item) { a.item = Math.random() < 0.6 ? 'boost' : 'banana'; a.itemT = 1 + Math.random() * 3; }
+      if (!a.item) giveItem(a, ItemTable.roll(rankOf(a), total, 0));
     }
   }
-  if (p.rolling > 0) {
+  if (p.rolling > 0) { // 아이템 룰렛
     p.rolling -= dt; p.rollTick -= dt;
-    if (p.rollTick <= 0) { p.rollTick = 0.07; $('item').textContent = Math.random() < 0.5 ? '🚀' : '🍌'; Sound.sfx.roll(); }
+    if (p.rollTick <= 0) { p.rollTick = 0.07; $('item').textContent = ItemTable.ITEMS[ItemTable.IDS[Math.floor(Math.random() * ItemTable.IDS.length)]].icon; Sound.sfx.roll(); }
     if (p.rolling <= 0) {
-      p.item = Math.random() < 0.5 ? 'boost' : 'banana';
-      $('item').textContent = ITEM_ICON[p.item]; $('item').classList.remove('rolling'); Sound.sfx.item();
+      giveItem(p, ItemTable.roll(p.rank, total, p.combo));
+      $('item').classList.remove('rolling'); Sound.sfx.item();
     }
   }
-  for (let k = bananas.length - 1; k >= 0; k--) {
-    const b = bananas[k]; b.age += dt; b.mesh.rotation.y += dt * 1.5;
-    let hit = false;
-    const bp = b.mesh.position;
-    if (!(b.owner === 'player' && b.age < 1.5) && Math.hypot(bp.x - p.pos.x, bp.z - p.pos.z) < 2.4 && Math.abs(bp.y - p.y) < 1.2) {
-      p.spin = 1.1; flash('미끄덩! 🍌', 'bad'); hit = true; Sound.sfx.spin(); game.stats.spins = (game.stats.spins || 0) + 1;
-      if (p.drift.on) endDrift(false);
-    }
-    for (const a of ais) {
-      if (hit || (b.owner === a && b.age < 1.5)) continue;
-      if (Math.hypot(bp.x - a.pos.x, bp.z - a.pos.z) < 2.4 && Math.abs(bp.y - a.y) < 1.2) { a.spin = 1.0; hit = true; }
-    }
-    if (hit || b.age > 45) { scene.remove(b.mesh); bananas.splice(k, 1); }
-  }
+  updateItems(dt);
   for (const o of scene.children) if (o.userData.cloud) o.position.x += dt * 2;
   for (const bl of deco.balloons) { bl.position.y = bl.userData.baseY + Math.sin(game.t * 0.4 + bl.userData.phase) * 6; bl.rotation.y += dt * 0.1; }
   for (const r of deco.spinners) r.rotation.z += dt * 0.8;

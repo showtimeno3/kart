@@ -89,24 +89,26 @@ function startRace() {
     idx: 8, idxF: 8, lat: 0, laps: 0, drift: { on: false, dir: 0, charge: 0 }, boost: 0, slow: 0, spin: 0, spinA: 0,
     y: T.pos[8].y, vy: 0, gy: T.pos[8].y, air: 0, airT: 0, land: 0, hopCd: 0, canTrick: false, trick: 0, tricked: false,
     roll: 0, pitch: 0, slopeP: 0, bodyYaw: 0, wheel: 0, shake: 0, padCd: 0, wet: 0,
-    item: null, rolling: 0, rollTick: 0, combo: 0, finished: false, finishTime: 0, rank: 5, gasAt: -99 };
+    rolling: 0, rollTick: 0, combo: 0, finished: false, finishTime: 0, rank: 5, gasAt: -99 };
+  resetEffects(p);
   const others = SPECIES_KEYS.filter((s) => s !== settings.species);
   const grid = [[44, -9], [44, 9], [26, -9], [26, 9]];
   const ais = grid.slice(0, AI_COUNT).map(([i, lat], k) => {
     const kart = M.makeKart(others[k]); scene.add(kart.root);
     return { kart, species: others[k], name: M.SPECIES[others[k]].name, color: M.SPECIES[others[k]].kart, d: i * T.segLen, idx: i, lat, latT: lat, latV: 0, speed: 0,
-      base: (33 + k * 1.1 + Math.random() * 2) * DIFF.speed, skill: DIFF.skill + Math.random() * 0.12, itemT: 0,
+      base: (33 + k * 1.1 + Math.random() * 2) * DIFF.speed, skill: DIFF.skill + Math.random() * 0.12,
       boost: 0, slow: 0, spin: 0, banana: 12 + Math.random() * 14, finished: false, finishTime: 0,
       roll: 0, bodyYaw: 0, wheel: 0, planGate: null, planLane: -1, pos: new THREE.Vector3(), y: T.pos[i].y, vy: 0, gy: T.pos[i].y, padCd: 0 };
   });
+  ais.forEach(resetEffects);
 
-  game = { scene, sky, sun, T, A, deco, gates, boxes, p, ais, bananas: [], t: -3.5, state: 'intro', introT: 0, paused: false, lastRank: 5, lastLap: 0, wrongT: 0, fps: [], def, bank: loadBank(),
-    stats: { total: 0, correct: 0, wrong: [] }, nextGate: null, endTimer: 0, lastCount: 99, camYaw: p.h, camY: p.y, qx: null, qy: null,
+  game = { scene, sky, sun, T, A, deco, gates, boxes, p, ais, hazards: [], shots: [], t: -3.5, state: 'intro', introT: 0, paused: false, lastRank: 5, lastLap: 0, wrongT: 0, fps: [], def, bank: loadBank(),
+    stats: { total: 0, correct: 0, wrong: [], items: {}, hits: {}, shieldBlocks: 0 }, nextGate: null, endTimer: 0, lastCount: 99, camYaw: p.h, camY: p.y, qx: null, qy: null,
     minimap: buildMinimap(T) };
 
   $('menu').classList.add('hidden'); $('result').classList.add('hidden');
   $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !touchMode);
-  $('question').classList.add('hidden'); $('item').textContent = '-'; $('countdown').textContent = '';
+  $('question').classList.add('hidden'); $('item').textContent = '-'; $('fx').textContent = ''; $('countdown').textContent = '';
   $('intro').classList.remove('hidden'); $('intro-name').textContent = def.name;
   $('intro-sub').textContent = `${LAPS}바퀴 · 문제 ${def.gates.length * LAPS}개`;
   $('lights').classList.add('hidden'); $('lights').className = 'hidden'; $('banner').className = ''; $('wrongway').classList.add('hidden');
@@ -159,20 +161,6 @@ function vertical(o, gy, dt) {
   return 0;
 }
 
-function useItem() {
-  if (!game || game.state !== 'race') return;
-  const p = game.p;
-  if (!p.item || p.rolling > 0 || p.finished) return;
-  if (p.item === 'boost') { p.boost = Math.max(p.boost, 2); flash('부스터! 🚀', 'info'); Sound.sfx.boost(); }
-  else dropBanana(kartPoint(p.kart, 0, 0, -3.2), 'player');
-  p.item = null; $('item').textContent = '-';
-}
-function dropBanana(at, owner) {
-  const m = M.makeBanana(); m.position.copy(at);
-  const i = nearest(game.T, at, owner === 'player' ? game.p.idx : owner.idx);
-  m.position.y = groundY(game.T, game.A, i, 0);
-  game.scene.add(m); game.bananas.push({ mesh: m, owner, age: 0 });
-}
 
 // ---------- 문제 ----------
 function nextGateFrom(idx) {
@@ -193,7 +181,9 @@ function updateNextGate() {
   $('q-prompt').textContent = best.q.prompt;
   $('q-prompt').classList.toggle('long', [...best.q.prompt].length > 9); // 긴 문제(시계, 듣기 등)는 한 줄에 들어가게 작게
   $('q-speak').classList.toggle('hidden', !best.q.speak);
-  document.querySelectorAll('.choice').forEach((el, k) => { el.textContent = best.q.choices[k]; });
+  document.querySelectorAll('.choice').forEach((el, k) => { el.textContent = best.q.choices[k]; el.classList.remove('off'); });
+  if (best.hintOff != null) document.querySelectorAll('.choice')[best.hintOff].classList.add('off');
+  else if (game.p.hint) applyHint(best);
   const qe = $('question'); qe.classList.remove('hidden', 'pop'); void qe.offsetWidth; qe.classList.add('pop'); game.qSize = null;
 }
 
@@ -221,7 +211,7 @@ function onPlayerGate(g) {
   }
   if (q.speakAfter) speak(q.speakAfter);
   saveBank(game.bank);
-  g.q = null;
+  g.q = null; g.hintOff = null;
   g.panels.forEach((m) => relabel(m, '?'));
   relabel(g.banner, '?');
   game.nextGate = null;

@@ -86,6 +86,11 @@ function updateHUD(dt) {
   if (game.tutorial && game.state === 'race') {
     while (game.tutorial.length && game.t >= game.tutorial[0][0]) flashTip(game.tutorial.shift()[1], 6);
   }
+  // 아이템 지속 효과 표시 (남은 초) + 비눗방울 화면 가장자리
+  const fx = [['shield', '🛡️'], ['star', '🌈'], ['magnet', '🧲'], ['sticky', '🍯'], ['bubble', '🫧']].filter(([f]) => p[f] > 0).map(([f, i]) => `${i}${Math.ceil(p[f])}`);
+  if (p.hint) fx.push('💡');
+  setText('fx', fx.join(' '));
+  setStyle('bubbles', 'opacity', p.bubble > 0 ? '1' : '0');
   if (bannerTimer > 0) { bannerTimer -= dt; if (bannerTimer <= 0) $('banner').className = ''; }
   if (tipTimer > 0) { tipTimer -= dt; if (tipTimer <= 0) $('tip').classList.add('hidden'); }
   if (flashTimer > 0) { flashTimer -= dt; if (flashTimer <= 0) $('feedback').classList.remove('show'); }

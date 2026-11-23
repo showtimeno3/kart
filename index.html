@@ -11,6 +11,7 @@
 <body>
 <div id="app"></div>
 <div id="speedlines"></div>
+<div id="bubbles"></div>
 
 <div id="hud" class="hidden">
   <div id="tl">
@@ -32,7 +33,7 @@
   <div id="wrongway" class="hidden">↩ 거꾸로 가고 있어요!</div>
   <div id="tip" class="hidden"></div>
   <div id="bl"><div class="label">드리프트</div><div id="gauge"><div id="gauge-fill"></div></div></div>
-  <div id="br"><div id="speed"><span id="speed-num">0</span><small>km/h</small></div><div id="item">-</div></div>
+  <div id="br"><div id="speed"><span id="speed-num">0</span><small>km/h</small></div><div id="item">-</div><div id="fx"></div></div>
   <div id="lights" class="hidden"><i></i><i></i><i></i></div>
   <div id="countdown"></div>
   <div id="intro" class="hidden"><div id="intro-name"></div><div id="intro-sub"></div><div class="skip">아무 키나 누르면 건너뛰기</div></div>
@@ -131,6 +132,7 @@ if (/^#(sim|race)=/.test(location.hash)) {
 <script src="js/trackgen.js"></script>
 <script src="js/models.js"></script>
 <script src="js/music.js"></script>
+<script src="js/itemtable.js"></script>
 <script src="js/tracks.js"></script>
 <script src="js/core.js"></script>
 <script src="js/audio.js"></script>
@@ -138,6 +140,7 @@ if (/^#(sim|race)=/.test(location.hash)) {
 <script src="js/render.js"></script>
 <script src="js/world.js"></script>
 <script src="js/race.js"></script>
+<script src="js/items.js"></script>
 <script src="js/player.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/view.js"></script>
