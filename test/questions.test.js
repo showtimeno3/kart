@@ -91,4 +91,16 @@ assert.ok(Q.OPPOSITES.length >= 15);
 
 const bank = [Q.math(1)];
 for (let i = 0; i < 200; i++) check(Q.next('math', 2, bank), 'bank');
+// 소리를 낼 수 없으면(음소거, 효과음 0, 음성 기능 없음) 듣기 문제는 풀 수 없음 → 내지 않음 (틀린 문제 목록에 있어도)
+{
+  const listenBank = [Q.make('english', 1, 'listen')];
+  for (let i = 0; i < 3000; i++) {
+    const q = Q.next('english', 1, listenBank, { canSpeak: false });
+    check(q, 'mute');
+    assert.ok(!q.id.startsWith('listen:'), '소리 없이 듣기 문제가 나옴');
+  }
+  let seen = false; // 소리가 나면 계속 나옴
+  for (let i = 0; i < 3000 && !seen; i++) seen = Q.next('english', 1, null, { canSpeak: true }).id.startsWith('listen:');
+  assert.ok(seen);
+}
 console.log('questions: all tests passed');

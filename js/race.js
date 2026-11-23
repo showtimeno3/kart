@@ -174,7 +174,7 @@ function updateNextGate() {
   if (best === game.nextGate) return;
   game.nextGate = best;
   if (!best.q) {
-    best.q = Questions.next(settings.subject, settings.level, game.bank);
+    best.q = Questions.next(settings.subject, settings.level, game.bank, { canSpeak: canSpeak() });
     best.panels.forEach((m, k) => relabel(m, best.q.choices[k]));
     relabel(best.banner, best.q.prompt);
     if (best.q.speak) speak(best.q.speak);
@@ -207,7 +207,7 @@ function onPlayerGate(g) {
     flash(`정답은 ${answerText}`, 'bad');
     Sound.sfx.wrong();
     Particles.burst(at, 14, 0x777788, 4, { add: false, grav: -2, size: 1.2, grow: 2 });
-    s.wrong.push({ prompt: q.prompt, answer: answerText, chosen: q.choices[lane], lat: Math.round(p.lat), want: q.answer });
+    s.wrong.push({ prompt: q.id.startsWith('listen:') ? `🔊 ${q.speak}` : q.prompt, answer: answerText, chosen: q.choices[lane], lat: Math.round(p.lat), want: q.answer });
     if (bankIdx < 0) game.bank.push(q);
   }
   if (q.speakAfter) speak(q.speakAfter);

@@ -198,10 +198,14 @@
     return Object.assign({}, q, { choices, answer: choices.indexOf(ans) });
   }
 
-  // 틀린 문제(bank)는 30% 확률로 다시 출제
-  function next(subject, level, bank) {
-    if (bank && bank.length && Math.random() < 0.3) return reshuffle(pick(bank));
-    return subject === 'english' ? english(level) : math(level);
+  // 틀린 문제(bank)는 30% 확률로 다시 출제. opts.canSpeak === false(소리를 낼 수 없음)면 듣기 문제는 풀 수 없으니 내지 않음
+  function next(subject, level, bank, opts = {}) {
+    const ok = (t) => opts.canSpeak !== false || t !== 'listen';
+    if (bank && bank.length && Math.random() < 0.3) {
+      const usable = bank.filter((b) => ok(b.id.split(':')[0]));
+      if (usable.length) return reshuffle(pick(usable));
+    }
+    return make(subject, level, pick(TYPES[subject === 'english' ? 'english' : 'math'][level].filter(ok)));
   }
 
   const api = { math, english, make, next, reshuffle, TYPES, WORDS, OPPOSITES };

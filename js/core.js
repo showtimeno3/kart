@@ -54,8 +54,10 @@ function saveBank(b) { try { localStorage.setItem(bankKey(), JSON.stringify(b.sl
 function loadBest(track) { try { return +localStorage.getItem(`eduKart.best.${track}`) || 0; } catch (e) { return 0; } }
 function saveBest(track, t) { try { localStorage.setItem(`eduKart.best.${track}`, String(t)); } catch (e) { /* 무시 */ } }
 
+// 영어 단어를 소리 내어 읽을 수 있는가 (음성 기능, 음소거, 효과음 음량)
+const canSpeak = () => !!window.speechSynthesis && !Sound.muted && settings.volSfx > 0;
 function speak(text) {
-  if (!window.speechSynthesis || Sound.muted || settings.volSfx === 0) return;
+  if (!canSpeak()) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'en-US'; u.rate = 0.85; u.volume = settings.volSfx / 100;
   speechSynthesis.cancel(); speechSynthesis.speak(u);
