@@ -176,4 +176,27 @@ function setup(...ais) {
   assert.deepStrictEqual([...p.items], ['shield'], '경고 중에 방패를 먼저 씀');
   assert.strictEqual(p.shield, 0);
 }
+// 룰렛이 둘째 칸을 채우는 동안에도 첫 칸은 쓸 수 있어야 함 (경고 중 방패)
+{
+  setup();
+  const p = ctx.game.p;
+  Object.assign(p, { items: ['shield'], rolling: 0.5, finished: false, shield: 0 });
+  ctx.game.state = 'race';
+  ctx.useItem();
+  assert.strictEqual(p.shield, 8, '룰렛 중에 Space 가 무시됨');
+  assert.deepStrictEqual([...p.items], []);
+}
+// 앞으로 던진 얼음 벽에는 던진 사람이 맞지 않음, 바로 뒤에 놓은 벽은 기존대로 1.5초만 면제
+{
+  const v = () => ({ x: 0, y: 0, z: 0, copy() { return this; } });
+  Object.assign(ctx, { kartPoint: v, nearest: () => 0, groundY: () => 0 });
+  ctx.M.iceWall = () => ({ position: { set: noop }, rotation: {} });
+  const k = kart({ idx: 0 });
+  setup(k);
+  Object.assign(ctx.game, { hazards: [], scene: { add: noop }, A: {}, T: { pos: [{ x: 0, y: 0, z: 0 }], right: [{ x: 1, z: 0 }], head: [0], sc: null } });
+  ctx.dropHazard('ice', k, 50);
+  assert.ok(ctx.game.hazards[0].touched.has(k), '앞으로 던진 얼음 벽에 내가 맞음');
+  ctx.dropHazard('ice', k, 0);
+  assert.ok(!ctx.game.hazards[1].touched.has(k));
+}
 console.log('items-hit: all tests passed');

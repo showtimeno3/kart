@@ -45,7 +45,7 @@ function updateWorld(dt) {
     if (b.mesh.position.distanceTo(tmpV.set(p.pos.x, p.y + 1.6, p.pos.z)) < 3) {
       b.respawn = 4; b.mesh.visible = false;
       Particles.burst(b.mesh.position, 16, [0xff6fa8, 0xffd84d, 0x4fc3ff][Math.floor(Math.random() * 3)], 8);
-      if (p.items.length < 2 && !p.finished && p.rolling <= 0) { p.rolling = 1.0; p.rollGold = b.gold; rollSlot().classList.add('rolling'); }
+      if (p.items.length < 2 && !p.finished && p.rolling <= 0) { p.rolling = 1.0; p.rollGold = b.gold; p.rollEl = rollSlot(); p.rollEl.classList.add('rolling'); } // 도는 칸은 시작할 때 정함
     }
     for (const a of ais) if (b.mesh.visible && b.mesh.position.distanceTo(tmpV.set(a.pos.x, a.y + 1.6, a.pos.z)) < 3) {
       b.respawn = 4; b.mesh.visible = false;
@@ -54,7 +54,7 @@ function updateWorld(dt) {
   }
   if (p.rolling > 0) { // 아이템 룰렛
     p.rolling -= dt; p.rollTick -= dt;
-    if (p.rollTick <= 0) { p.rollTick = 0.07; rollSlot().textContent = ItemTable.ITEMS[ItemTable.IDS[Math.floor(Math.random() * ItemTable.IDS.length)]].icon; Sound.sfx.roll(); }
+    if (p.rollTick <= 0) { p.rollTick = 0.07; p.rollEl.textContent = ItemTable.ITEMS[ItemTable.IDS[Math.floor(Math.random() * ItemTable.IDS.length)]].icon; Sound.sfx.roll(); }
     if (p.rolling <= 0) {
       for (let n = p.rollGold ? 2 : 1; n > 0; n--) giveItem(p, ItemTable.roll(p.rank, total, p.combo, Math.random, p.laps === 0));
       $('item').classList.remove('rolling'); $('item2').classList.remove('rolling'); updateItemSlot(); Sound.sfx.item();

@@ -108,14 +108,14 @@ function incomingThreat(k) {
   let best = null;
   for (const s of game.shots) {
     if (s.owner === k || s.gone) continue;
-    let dist = null;
+    let dist = null, front = false;
     if (s.kind === 'homing' || s.kind === 'bee') {
-      if (s.target === k) dist = Math.hypot(s.mesh.position.x - k.pos.x, s.mesh.position.z - k.pos.z);
+      if (s.target === k) { dist = Math.hypot(s.mesh.position.x - k.pos.x, s.mesh.position.z - k.pos.z); front = s.s > kartProg(k); }
     } else if (onSc(k) === !!s.sc) {
       const d = (kartProg(k) - s.s) * game.T.segLen; // + 면 샷이 내 뒤
-      if (d * s.dir > 0) dist = Math.abs(d); // 나를 향해 오는 중
+      if (d * s.dir > 0) { dist = Math.abs(d); front = d < 0; } // 나를 향해 오는 중 (앞에서 오면 front)
     }
-    if (dist != null && dist <= WARN_RANGE && (!best || dist < best.dist)) best = { icon: ItemTable.ITEMS[s.kind].icon, dist };
+    if (dist != null && dist <= WARN_RANGE && (!best || dist < best.dist)) best = { icon: ItemTable.ITEMS[s.kind].icon, dist, front };
   }
   return best;
 }

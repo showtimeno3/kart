@@ -28,7 +28,7 @@ function updateWarn(dt) {
   $('warn').classList.toggle('hidden', !th);
   if (!th) { warnOn = false; return; }
   const k = 1 - th.dist / WARN_RANGE;
-  setText('warn-text', `⚠️ 뒤에서 ${th.icon}!${p.items[0] === 'shield' ? ' Space 로 🛡️!' : ''}`);
+  setText('warn-text', `⚠️ ${th.front ? '앞' : '뒤'}에서 ${th.icon}!${p.items[0] === 'shield' ? (touchMode ? ' 아이템 버튼으로 🛡️!' : ' Space 로 🛡️!') : ''}`);
   setStyle('warn-fill', 'width', `${Math.round(k * 100)}%`);
   setStyle('warn-fill', 'background', k > 0.6 ? '#ff3b30' : '#ffb300');
   if (!warnOn) { warnOn = true; warnBeep = 0; game.stats.warns = (game.stats.warns || 0) + 1; }

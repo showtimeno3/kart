@@ -118,7 +118,9 @@ function startRace() {
     minimap: buildMinimap(T) };
 
   $('menu').classList.add('hidden'); $('result').classList.add('hidden'); setStyle('bubbles', 'opacity', '0');
-  $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !touchMode);
+  $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !touchMode); $('hud').classList.toggle('touch', touchMode);
+  // 앞 경주에서 남은 표시 지우기 (경고, 룰렛, 바퀴 수)
+  $('warn').classList.add('hidden'); $('item').classList.remove('rolling'); $('item2').classList.remove('rolling'); warnOn = false; setText('lap', `랩 1/${LAPS}`);
   $('question').classList.add('hidden'); $('item').textContent = '-'; $('item2').textContent = ''; $('fx').textContent = ''; $('countdown').textContent = '';
   $('intro').classList.remove('hidden'); $('intro-name').textContent = def.name;
   $('intro-sub').textContent = `${LAPS}바퀴 · 문제 ${def.gates.length * LAPS}개`;

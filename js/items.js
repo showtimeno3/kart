@@ -1,8 +1,7 @@
-// 아이템 12종: 사용, 던지는 물풍선, 바닥 함정(바나나·꿀·얼음 벽), 맞았을 때 처리, 지속 효과
+// 아이템 14종: 2칸, 사용, 바닥 함정(바나나·꿀·얼음 벽), 맞았을 때 처리, 지속 효과, 컴퓨터 판단 (날아가는 것은 js/shots.js)
 // 게임 스크립트들은 최상위 선언을 서로 공유한다 (index.html 의 순서대로 읽힘).
 'use strict';
 
-const SHOT_SPEED = 70; // 물풍선이 날아가는 속도 (초당 거리)
 const HAZARD = { banana: { r: 2.4, life: 25, effect: 'spin', msg: '미끄덩! 🍌' }, honey: { r: 4.5, life: 20, effect: 'sticky', msg: '끈적끈적! 🍯' },
   ice: { r: 3, life: 10, effect: 'bump', msg: '쿵! 🧊' } };
 
@@ -88,7 +87,7 @@ function updateItemSlot() {
 function useItem(back = false) {
   if (!game || game.state !== 'race') return;
   const p = game.p;
-  if (!p.items.length || p.rolling > 0 || p.finished) return;
+  if (!p.items.length || p.finished) return; // 룰렛이 빈 칸을 채우는 중이어도 첫 칸은 씀
   useItemFor(p, back);
 }
 
@@ -149,7 +148,7 @@ function dropHazard(kind, k, ahead = 0) {
     mesh.position.set(at.x, groundY(T, A, i, lat), at.z); mesh.rotation.y = T.head[i];
   }
   game.scene.add(mesh);
-  game.hazards.push({ kind, mesh, owner: k, age: 0, r: cfg.r, life: cfg.life, touched: new Set() });
+  game.hazards.push({ kind, mesh, owner: k, age: 0, r: cfg.r, life: cfg.life, touched: new Set(ahead > 0 ? [k] : []) }); // 앞으로 던진 것에는 내가 안 맞음
   if (k === game.p) { if (kind === 'ice') Sound.sfx.ice(); else if (kind === 'honey') Sound.sfx.honey(); }
 }
 
@@ -200,7 +199,7 @@ function updateItems(dt) {
     if (gone) { scene.remove(h.mesh); hz.splice(n, 1); }
   }
   updateShots(dt, karts); // js/shots.js
-  if (racing) for (const a of game.ais) if (a.items.length) aiUseItems(a, dt);
+  if (racing) for (const a of game.ais) if (a.items.length && !a.finished) aiUseItems(a, dt); // 골인한 컴퓨터는 아이템을 안 씀
 }
 
 // 무지개 별: 부딪힌 카트를 돌게 함. 별 한 번에 같은 카트는 한 번만 (방패로 막은 다음 프레임에 다시 맞지 않게)
