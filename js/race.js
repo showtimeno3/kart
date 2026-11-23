@@ -107,7 +107,7 @@ function startRace() {
     stats: { total: 0, correct: 0, wrong: [], items: {}, hits: {}, shieldBlocks: 0 }, nextGate: null, endTimer: 0, lastCount: 99, camYaw: p.h, camY: p.y, qx: null, qy: null,
     minimap: buildMinimap(T) };
 
-  $('menu').classList.add('hidden'); $('result').classList.add('hidden');
+  $('menu').classList.add('hidden'); $('result').classList.add('hidden'); setStyle('bubbles', 'opacity', '0');
   $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !touchMode);
   $('question').classList.add('hidden'); $('item').textContent = '-'; $('fx').textContent = ''; $('countdown').textContent = '';
   $('intro').classList.remove('hidden'); $('intro-name').textContent = def.name;
@@ -177,7 +177,7 @@ function updateNextGate() {
     best.q = Questions.next(settings.subject, settings.level, game.bank, { canSpeak: canSpeak() });
     best.panels.forEach((m, k) => relabel(m, best.q.choices[k]));
     relabel(best.banner, best.q.prompt);
-    if (best.q.speak) speak(best.q.speak);
+    if (best.q.speak) speak(best.q.speak, false); // 앞 문제 단어 읽기가 끝난 뒤 읽음
   }
   $('q-prompt').textContent = best.q.prompt;
   $('q-prompt').classList.toggle('long', [...best.q.prompt].length > 9); // 긴 문제(시계, 듣기 등)는 한 줄에 들어가게 작게

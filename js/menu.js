@@ -97,6 +97,7 @@ $('close-settings').addEventListener('click', () => { $('settings').classList.ad
 $('pause-btn').addEventListener('click', () => togglePause());
 $('resume').addEventListener('click', () => togglePause());
 function goMenu() {
+  setStyle('bubbles', 'opacity', '0'); // 비눗방울을 맞은 채 그만둬도 메뉴에 남지 않게
   ['result', 'pause', 'settings', 'hud', 'touch'].forEach((id) => $(id).classList.add('hidden'));
   $('menu').classList.remove('hidden'); $('speedlines').style.opacity = 0;
   game = null; showcase.setSpecies(settings.species); refreshMenu();

@@ -56,9 +56,11 @@ function saveBest(track, t) { try { localStorage.setItem(`eduKart.best.${track}`
 
 // 영어 단어를 소리 내어 읽을 수 있는가 (음성 기능, 음소거, 효과음 음량)
 const canSpeak = () => !!window.speechSynthesis && !Sound.muted && settings.volSfx > 0;
-function speak(text) {
+// interrupt=false: 읽고 있던 말(앞 문제 정답 단어)을 끊지 않고 뒤에 이어 읽음
+function speak(text, interrupt = true) {
   if (!canSpeak()) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'en-US'; u.rate = 0.85; u.volume = settings.volSfx / 100;
-  speechSynthesis.cancel(); speechSynthesis.speak(u);
+  if (interrupt) speechSynthesis.cancel();
+  speechSynthesis.speak(u);
 }
