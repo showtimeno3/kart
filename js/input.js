@@ -7,7 +7,7 @@ const keys = {}, pressed = {};
 const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right', ShiftLeft: 'drift', ShiftRight: 'drift', Space: 'item' };
 function press(k) {
-  if (k === 'item' && !keys.item) useItem();
+  if (k === 'item' && !keys.item) useItem(keys.down); // ↓ 누른 채면 뒤로 던짐
   if (k === 'up' && !keys.up && game) game.p.gasAt = game.t; // 스타트 대시 판정용
   if (!keys[k]) pressed[k] = true;
   keys[k] = true;

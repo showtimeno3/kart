@@ -33,6 +33,8 @@ function updateKartMeshes() {
   }
 }
 
+// 룰렛이 도는 칸: 첫 칸이 비었으면 첫 칸, 아니면 둘째 칸
+const rollSlot = () => $(game.p.items.length ? 'item2' : 'item');
 function updateWorld(dt) {
   const { p, ais, boxes, scene, deco } = game;
   const total = ais.length + 1;
@@ -43,19 +45,19 @@ function updateWorld(dt) {
     if (b.mesh.position.distanceTo(tmpV.set(p.pos.x, p.y + 1.6, p.pos.z)) < 3) {
       b.respawn = 4; b.mesh.visible = false;
       Particles.burst(b.mesh.position, 16, [0xff6fa8, 0xffd84d, 0x4fc3ff][Math.floor(Math.random() * 3)], 8);
-      if (!p.item && !p.finished && p.rolling <= 0) { p.rolling = 1.0; $('item').classList.add('rolling'); }
+      if (p.items.length < 2 && !p.finished && p.rolling <= 0) { p.rolling = 1.0; p.rollGold = b.gold; rollSlot().classList.add('rolling'); }
     }
     for (const a of ais) if (b.mesh.visible && b.mesh.position.distanceTo(tmpV.set(a.pos.x, a.y + 1.6, a.pos.z)) < 3) {
       b.respawn = 4; b.mesh.visible = false;
-      if (!a.item) giveItem(a, ItemTable.roll(rankOf(a), total, 0, Math.random, aiTotal(a) < N)); // 첫 바퀴면 1등도 2~3등 표
+      for (let n = b.gold ? 2 : 1; n > 0; n--) giveItem(a, ItemTable.roll(rankOf(a), total, 0, Math.random, aiTotal(a) < N)); // 첫 바퀴면 1등도 2~3등 표, 칸이 차면 안 들어감
     }
   }
   if (p.rolling > 0) { // 아이템 룰렛
     p.rolling -= dt; p.rollTick -= dt;
-    if (p.rollTick <= 0) { p.rollTick = 0.07; $('item').textContent = ItemTable.ITEMS[ItemTable.IDS[Math.floor(Math.random() * ItemTable.IDS.length)]].icon; Sound.sfx.roll(); }
+    if (p.rollTick <= 0) { p.rollTick = 0.07; rollSlot().textContent = ItemTable.ITEMS[ItemTable.IDS[Math.floor(Math.random() * ItemTable.IDS.length)]].icon; Sound.sfx.roll(); }
     if (p.rolling <= 0) {
-      giveItem(p, ItemTable.roll(p.rank, total, p.combo, Math.random, p.laps === 0));
-      $('item').classList.remove('rolling'); Sound.sfx.item();
+      for (let n = p.rollGold ? 2 : 1; n > 0; n--) giveItem(p, ItemTable.roll(p.rank, total, p.combo, Math.random, p.laps === 0));
+      $('item').classList.remove('rolling'); $('item2').classList.remove('rolling'); updateItemSlot(); Sound.sfx.item();
     }
   }
   updateItems(dt);

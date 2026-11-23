@@ -71,16 +71,26 @@ function startRace() {
     c.fillStyle = '#fff'; c.font = `92px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', w / 2, h / 2 + 6);
   });
   const boxMat = new THREE.MeshLambertMaterial({ map: boxTex, transparent: true, opacity: 0.92, emissive: 0x333333 });
+  // 금색 상자: 아이템 2개
+  const goldTex = canvasTex(128, 128, (c, w, h) => {
+    const gr = c.createLinearGradient(0, 0, w, h);
+    gr.addColorStop(0, '#fff3a0'); gr.addColorStop(0.5, '#ffd84d'); gr.addColorStop(1, '#ff9f1c');
+    c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#fff'; c.lineWidth = 10; c.strokeRect(5, 5, w - 10, h - 10);
+    c.fillStyle = '#fff'; c.font = `70px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('×2', w / 2, h / 2 + 6);
+  });
+  const goldMat = new THREE.MeshLambertMaterial({ map: goldTex, emissive: 0x664400 });
   const boxGeo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
   const boxes = [];
   for (const u of def.items) {
     const i = uIdx(u);
-    for (const lat of [-15, -5, 5, 15]) {
-      const m = new THREE.Mesh(boxGeo, boxMat);
+    const goldAt = Math.floor(Math.random() * 4); // 줄마다 1개는 금색
+    [-15, -5, 5, 15].forEach((lat, n) => {
+      const gold = n === goldAt, m = new THREE.Mesh(boxGeo, gold ? goldMat : boxMat);
       const base = roadPoint(T, i, lat, 2);
       m.position.copy(base); m.castShadow = true; scene.add(m);
-      boxes.push({ mesh: m, respawn: 0, phase: Math.random() * 6, baseY: base.y });
-    }
+      boxes.push({ mesh: m, respawn: 0, phase: Math.random() * 6, baseY: base.y, gold });
+    });
   }
 
   // 플레이어 & 컴퓨터 (플레이어는 맨 뒤에서 출발)
@@ -109,7 +119,7 @@ function startRace() {
 
   $('menu').classList.add('hidden'); $('result').classList.add('hidden'); setStyle('bubbles', 'opacity', '0');
   $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !touchMode);
-  $('question').classList.add('hidden'); $('item').textContent = '-'; $('fx').textContent = ''; $('countdown').textContent = '';
+  $('question').classList.add('hidden'); $('item').textContent = '-'; $('item2').textContent = ''; $('fx').textContent = ''; $('countdown').textContent = '';
   $('intro').classList.remove('hidden'); $('intro-name').textContent = def.name;
   $('intro-sub').textContent = `${LAPS}바퀴 · 문제 ${def.gates.length * LAPS}개`;
   $('lights').classList.add('hidden'); $('lights').className = 'hidden'; $('banner').className = ''; $('wrongway').classList.add('hidden');

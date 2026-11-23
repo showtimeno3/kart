@@ -69,7 +69,7 @@ function simulate(seconds) {
   let vSum = 0, steps = 0, airMax = 0;
   for (let k = 0; k < seconds * 30 && game.state !== 'done'; k++) {
     autopilot();
-    if (p.item && p.rolling <= 0) useItem(); // 아이템은 들자마자 사용
+    if (p.items.length && p.rolling <= 0) useItem(); // 아이템은 들자마자 사용
     if (simDrift) keys.drift = Math.abs(T.curv[(p.idx + 8) % N]) > 0.16 && p.vF > 22; // 드리프트 경로 점검용
     if (!simDrift && p.air > 0.5 && p.canTrick) press('drift'); // 트릭 경로 점검용
     else if (!simDrift) keys.drift = false;
@@ -93,7 +93,7 @@ if (simMode) {
   for (const k of ['track', 'level', 'difficulty']) if (hashArgs.has(k)) settings[k] = +hashArgs.get(k);
   for (const k of ['subject', 'species']) if (hashArgs.has(k)) settings[k] = hashArgs.get(k);
   startRace(); simulate(+hashArgs.get(simMode));
-  if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(); } } // use=아이템: 화면 점검용
+  if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(hashArgs.get('back') === '1'); } if (hashArgs.has('give')) hashArgs.get('give').split(',').forEach((id) => giveItem(game.p, id)); } // use=아이템: 화면 점검용
   if (hashArgs.get('pause') === '1') togglePause();
 } else if (hashArgs.has('showcase')) { showcase.setSpecies(hashArgs.get('showcase')); showcase.angle = +(hashArgs.get('ang') || 2.6); // 메뉴 캐릭터 화면 점검용
 } else if (hashArgs.has('intro')) { if (hashArgs.has('track')) settings.track = +hashArgs.get('track'); startRace(); game.introT = 1.2; step(0); } // #intro[&track=n]: 출발 전 연출 화면

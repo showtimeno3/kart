@@ -66,6 +66,11 @@ button { font-family: var(--font); }
   font-size: 54px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 0 rgba(29,43,83,.45); }
 #item.rolling { animation: shake .1s infinite; }
 #item { position: relative; }
+/* 둘째 칸: 첫 칸 옆에 작게 (첫 칸을 쓰면 앞으로 당겨짐) */
+#item2 { width: 56px; height: 56px; align-self: flex-end; border: 4px solid var(--navy); border-radius: 14px; background: var(--cream); opacity: .9;
+  display: flex; align-items: center; justify-content: center; font-size: 32px; }
+#item2:empty { opacity: .4; }
+#item2.rolling { animation: shake .1s infinite; }
 #item .cnt { position: absolute; right: 6px; bottom: 2px; font-size: 22px; color: var(--navy); }
 #fx { position: absolute; right: 0; bottom: calc(100% + 8px); font-size: 22px; color: #fff; white-space: nowrap; text-shadow: 0 2px 0 var(--navy), 0 0 6px rgba(0,0,0,.4); }
 .choice.off { background: #9aa0a6 !important; opacity: .55; text-decoration: line-through; }
@@ -182,6 +187,7 @@ button { font-family: var(--font); }
   #speed { font-size: 30px; }
   #speed small { font-size: 14px; }
   #item { width: 66px; height: 66px; font-size: 38px; border-width: 4px; }
+  #item2 { width: 42px; height: 42px; font-size: 24px; border-width: 3px; }
   #gauge { max-width: 32vw; }
   .label { font-size: 15px; }
   #touch { bottom: 96px; }

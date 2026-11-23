@@ -25,7 +25,7 @@ const onSc = (k) => (k === game.p ? !!game.p.onSc : !!k.sc); // 지름길 위에
 const scDist = (k) => (k === game.p ? game.p.scK * game.T.sc.step : k.sc.s); // 지름길 시작부터 간 거리
 
 function resetEffects(k) {
-  Object.assign(k, { item: null, charges: 0, shield: 0, star: 0, magnet: 0, sticky: 0, bubble: 0, bubbleT: 0, hint: false, itemHeld: 0, itemT: 0, shieldMesh: null });
+  Object.assign(k, { items: [], charges: 0, shield: 0, star: 0, magnet: 0, sticky: 0, bubble: 0, bubbleT: 0, hint: false, itemHeld: 0, itemT: 0, shieldMesh: null });
 }
 function countUse(id, me) {
   const s = game.stats.items;
@@ -65,26 +65,35 @@ function hitKart(k, effect, msg) {
 }
 
 // ---------- 아이템 얻기 / 쓰기 ----------
+// 아이템 2칸: 빈 칸에 넣음 (두 칸이 차 있으면 false)
 function giveItem(k, id) {
-  k.item = id; k.charges = id === 'boost3' ? 3 : 0; k.itemHeld = 0; k.itemT = 1 + Math.random() * 2;
+  if (k.items.length >= 2) return false;
+  k.items.push(id);
+  if (k.items.length === 1) armFirst(k);
   if (k === game.p) updateItemSlot();
+  return true;
+}
+// 첫 칸에 새 아이템이 왔을 때: 부스터 3개 횟수, 컴퓨터가 쓰기까지 기다리는 시간
+function armFirst(k) {
+  k.charges = k.items[0] === 'boost3' ? 3 : 0; k.itemHeld = 0; k.itemT = 1 + Math.random() * 2;
 }
 function updateItemSlot() {
-  const p = game.p, el = $('item');
-  if (!p.item) { el.textContent = '-'; return; }
-  el.innerHTML = ItemTable.ITEMS[p.item].icon + (p.item === 'boost3' ? `<b class="cnt">${p.charges}</b>` : '');
+  const p = game.p, [a, b] = p.items;
+  $('item').innerHTML = a ? ItemTable.ITEMS[a].icon + (a === 'boost3' ? `<b class="cnt">${p.charges}</b>` : '') : '-';
+  $('item2').textContent = b ? ItemTable.ITEMS[b].icon : '';
 }
 
 // 플레이어 아이템 키
-function useItem() {
+function useItem(back = false) {
   if (!game || game.state !== 'race') return;
   const p = game.p;
-  if (!p.item || p.rolling > 0 || p.finished) return;
-  useItemFor(p);
+  if (!p.items.length || p.rolling > 0 || p.finished) return;
+  useItemFor(p, back);
 }
 
-function useItemFor(k) {
-  const id = k.item, me = k === game.p;
+// 첫 칸 아이템 사용. back: 뒤로 던지기 (물풍선, 얼음 벽)
+function useItemFor(k, back = false) {
+  const id = k.items[0], me = k === game.p;
   if (!id) return;
   countUse(id, me);
   if (id === 'boost' || id === 'boost3') { k.boost = Math.max(k.boost, me ? 2 : 1.6); if (me) { flash('부스터! 🚀', 'info'); Sound.sfx.boost(); } }
@@ -101,8 +110,8 @@ function useItemFor(k) {
     k.hint = true;
     if (me) { Sound.sfx.hint(); if (game.nextGate && game.nextGate.q) applyHint(game.nextGate); else flash('💡 다음 문제에서 오답 하나를 지워 줄게요', 'info'); }
   }
-  if (id === 'boost3' && --k.charges > 0) { k.itemHeld = 0; k.itemT = 1; } // 남은 부스터는 그대로 들고 있음
-  else k.item = null;
+  if (id === 'boost3' && --k.charges > 0) { k.itemHeld = 0; k.itemT = 1; } // 남은 부스터는 그대로 첫 칸에
+  else { k.items.shift(); if (k.items.length) armFirst(k); } // 뒤 칸이 당겨짐
   if (me) updateItemSlot();
 }
 
@@ -238,7 +247,7 @@ function updateItems(dt) {
     }
     if (gone) { splash(s.mesh.position.clone()); scene.remove(s.mesh); sh.splice(n, 1); }
   }
-  if (racing) for (const a of game.ais) if (a.item) aiUseItems(a, dt);
+  if (racing) for (const a of game.ais) if (a.items.length) aiUseItems(a, dt);
 }
 
 // 앞쪽 가까이에 함정이나 날아오는 물풍선이 있는가 (안정형 방패용)
@@ -263,7 +272,7 @@ function starBump(k, karts) {
 // 컴퓨터 아이템 쓰기: 앞 카트가 가까우면 공격, 뒤 카트가 가까우면 함정, 나머지는 잠깐 뒤
 function aiUseItems(a, dt) {
   a.itemHeld += dt;
-  const id = a.item;
+  const id = a.items[0];
   let use = a.itemHeld > 8;
   const reach = a.persona === 'aggro' ? 120 : 80; // 공격형은 더 멀리서도 던짐
   if (id === 'balloon' || id === 'homing' || id === 'bubble') { const [t, gap] = kartAhead(a); use = use || (t && gap < reach); }

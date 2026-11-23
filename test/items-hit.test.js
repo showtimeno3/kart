@@ -69,4 +69,22 @@ function setup(...ais) {
   assert.strictEqual(ctx.shotHits(shot, kart({ pos: { x: 40, z: 0 } })), false, '멀리 있는 카트가 맞음');
   assert.strictEqual(ctx.shotHits(shot, kart({ pos: { x: 0, z: 0 }, y: 9 })), false, '높이가 다른 카트(다리 위/아래)가 맞음');
 }
+// 아이템 2칸: 빈 칸에 들어감, 첫 칸부터 씀, 쓰면 뒤 칸이 당겨짐. 부스터 3개는 다 쓸 때까지 첫 칸에 남음
+{
+  const a = kart({ items: [], charges: 0 });
+  setup(a);
+  assert.strictEqual(ctx.giveItem(a, 'hint'), true);
+  assert.strictEqual(ctx.giveItem(a, 'boost3'), true);
+  assert.strictEqual(ctx.giveItem(a, 'hint'), false, '세 번째가 들어감');
+  ctx.useItemFor(a);
+  assert.deepStrictEqual([...a.items], ['boost3']);
+  assert.strictEqual(a.charges, 3, '당겨진 부스터 3개');
+  assert.strictEqual(a.hint, true);
+  ctx.giveItem(a, 'hint'); ctx.useItemFor(a); ctx.useItemFor(a);
+  assert.deepStrictEqual([...a.items], ['boost3', 'hint'], '부스터가 남았는데 둘째 칸이 당겨짐');
+  ctx.useItemFor(a);
+  assert.deepStrictEqual([...a.items], ['hint']);
+  ctx.useItemFor(a);
+  assert.deepStrictEqual([...a.items], []);
+}
 console.log('items-hit: all tests passed');
