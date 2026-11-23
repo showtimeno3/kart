@@ -191,6 +191,7 @@ function updateNextGate() {
     if (best.q.speak) speak(best.q.speak);
   }
   $('q-prompt').textContent = best.q.prompt;
+  $('q-prompt').classList.toggle('long', [...best.q.prompt].length > 9); // 긴 문제(시계, 듣기 등)는 한 줄에 들어가게 작게
   $('q-speak').classList.toggle('hidden', !best.q.speak);
   document.querySelectorAll('.choice').forEach((el, k) => { el.textContent = best.q.choices[k]; });
   const qe = $('question'); qe.classList.remove('hidden', 'pop'); void qe.offsetWidth; qe.classList.add('pop'); game.qSize = null;

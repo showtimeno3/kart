@@ -40,6 +40,7 @@ button { font-family: var(--font); }
   border-radius: 14px; padding: 2px 14px; font-size: 22px; }
 #q-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
 #q-prompt { font-size: clamp(40px, 5.6vw, 72px); line-height: 1.1; letter-spacing: 1px; }
+#q-prompt.long { font-size: clamp(28px, 3.6vw, 46px); white-space: nowrap; }
 #q-speak { pointer-events: auto; width: 54px; height: 54px; border-radius: 50%; border: 4px solid var(--navy); background: var(--yellow); font-size: 26px; cursor: pointer; flex: none; }
 #q-choices { display: flex; gap: 10px; margin-top: 10px; }
 .choice { flex: 1; font-size: 24px; padding: 6px 4px; border-radius: 14px; border: 3px solid var(--navy); color: #fff; }
@@ -170,6 +171,7 @@ button { font-family: var(--font); }
   #touch { bottom: 96px; }
   #touch button { width: 74px; height: 74px; font-size: 17px; }
   #q-prompt { font-size: 40px; }
+  #q-prompt.long { font-size: 26px; }
   .choice { font-size: 20px; }
 }
 @media (hover: none) { .help { display: none; } }

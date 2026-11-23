@@ -39,7 +39,7 @@ function run(hash, extra = []) {
       let k;
       while ((k = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, k); buf = buf.slice(k + 1);
-        if (/CONSOLE/.test(line) && /Uncaught|Error/.test(line)) errors.push(line.trim().slice(0, 300));
+        if (/CONSOLE/.test(line) && /Uncaught|Error/.test(line) && !/runtime.lastError/.test(line)) errors.push(line.trim().slice(0, 300));
         const m = /"SIM (\{.*\})"/.exec(line);
         if (m) { result = JSON.parse(m[1].replace(/\\"/g, '"')); finish('ok'); return; }
       }
