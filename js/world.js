@@ -241,16 +241,30 @@ function makeTerrain(def, T) {
   const b = T.box, cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2;
   const coarse = T.pos.filter((_, i) => i % 6 === 0).concat(T.sc ? T.sc.pos.filter((_, k) => k % 3 === 0) : []); // 지름길 주변도 평평하게
   const theme = THEMES[def.theme];
+  const bridgeAt = coarse.map((p) => T.bridge[T.pos.indexOf(p)] === true); // 다리 위 점: 아래로 길이 지나가므로 땅을 채우지 않음
+  let nearY = 0, lowD = 1e4; // distTrack 이 함께 구함: 가장 가까운 길 점의 높이, 낮은(평지) 길까지 거리
   const distTrack = (x, z) => {
+    nearY = 0; lowD = 1e4;
     if (x < b.min.x - 300 || x > b.max.x + 300 || z < b.min.z - 300 || z > b.max.z + 300) return 1e4;
-    let m = Infinity; for (const p of coarse) { const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < m) m = d; }
+    let m = Infinity;
+    coarse.forEach((p, k) => {
+      const d = (p.x - x) ** 2 + (p.z - z) ** 2;
+      if (d < m) { m = d; nearY = bridgeAt[k] ? 0 : p.y; }
+      if (p.y < 0.3 && d < lowD) lowD = d;
+    });
+    lowD = Math.sqrt(lowD);
     return Math.sqrt(m);
   };
   const height = (x, z) => {
     const d = distTrack(x, z), near = sstep(EDGE + 18, EDGE + 120, d);
-    if (near <= 0) return 0;
-    const rc = Math.hypot(x - cx, z - cz), far = sstep(Math.max(b.max.x - cx, b.max.z - cz) + 250, Math.max(b.max.x - cx, b.max.z - cz) + 750, rc);
-    return near * theme.height(x, z, far, TR);
+    let h = 0;
+    if (near > 0) {
+      const rc = Math.hypot(x - cx, z - cz), far = sstep(Math.max(b.max.x - cx, b.max.z - cz) + 250, Math.max(b.max.x - cx, b.max.z - cz) + 750, rc);
+      h = near * theme.height(x, z, far, TR);
+    }
+    // 높은 길(언덕) 옆 땅을 완만한 비탈(1:4)로 이음: 길보다 1.5 낮게(땅이 길을 뚫고 올라오지 않게), 평지 길 근처는 그대로 0
+    if (theme.fill !== false && nearY > 0.3) h = Math.max(h, Math.min(nearY - 1.5 - Math.max(0, d - EDGE) * 0.25, Math.max(0, lowD - EDGE - 4) * 0.5));
+    return h;
   };
   const TR = { height, distTrack, cx, cz, T };
   if (theme.prepare) theme.prepare(TR); // 예: 해안 도로의 바다 방향
