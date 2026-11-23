@@ -1729,7 +1729,8 @@
   requestAnimationFrame(frame);
 
   // 자동 점검용 자율주행: index.html#sim=초 → 그 시간만큼 빠르게 진행 후 결과를 콘솔에 출력
-  const simDrift = /drift=1/.test(location.hash);
+  const hashArgs = new URLSearchParams(location.hash.slice(1)); // 순서 상관없이 받음
+  const simDrift = hashArgs.get('drift') === '1';
   // 앞쪽 목표점을 따라가는 단순 추종 (회전 지연을 고려해 yawRate 로 보정), 정답 차선으로 이동
   function autopilot() {
     const { T, p } = game, g = game.nextGate;
@@ -1763,14 +1764,13 @@
 
   // #sim=초[&track=n][&subject=s][&species=s] : 자동 점검, #race=초 : 그 시간만큼 진행 후 화면 유지(스크린샷용)
   // #intro / #pause / #result 처럼 화면 점검용 상태도 지원
-  const sim = /^#(sim|race)=(\d+)(?:&track=(\d))?(?:&subject=(\w+))?(?:&species=(\w+))?/.exec(location.hash);
-  if (sim) {
-    if (sim[3]) settings.track = +sim[3];
-    if (sim[4]) settings.subject = sim[4];
-    if (sim[5]) settings.species = sim[5];
-    startRace(); simulate(+sim[2]);
-    if (sim[1] === 'race') { keys.up = true; }
-    if (/&pause=1/.test(location.hash)) togglePause();
+  const simMode = hashArgs.has('sim') ? 'sim' : hashArgs.has('race') ? 'race' : null;
+  if (simMode) {
+    for (const k of ['track', 'level', 'difficulty']) if (hashArgs.has(k)) settings[k] = +hashArgs.get(k);
+    for (const k of ['subject', 'species']) if (hashArgs.has(k)) settings[k] = hashArgs.get(k);
+    startRace(); simulate(+hashArgs.get(simMode));
+    if (simMode === 'race') { keys.up = true; }
+    if (hashArgs.get('pause') === '1') togglePause();
   } else if (location.hash === '#intro') { startRace(); game.introT = 1.2; step(0); }
   else if (/^#bench/.test(location.hash)) { // #bench[&track=n][&quality=low]: 실제 시간 성능 측정
     const m = /track=(\d)/.exec(location.hash); if (m) settings.track = +m[1];
