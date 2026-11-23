@@ -47,14 +47,14 @@ function updateWorld(dt) {
     }
     for (const a of ais) if (b.mesh.visible && b.mesh.position.distanceTo(tmpV.set(a.pos.x, a.y + 1.6, a.pos.z)) < 3) {
       b.respawn = 4; b.mesh.visible = false;
-      if (!a.item) giveItem(a, ItemTable.roll(rankOf(a), total, 0));
+      if (!a.item) giveItem(a, ItemTable.roll(rankOf(a), total, 0, Math.random, aiTotal(a) < N)); // 첫 바퀴면 1등도 2~3등 표
     }
   }
   if (p.rolling > 0) { // 아이템 룰렛
     p.rolling -= dt; p.rollTick -= dt;
     if (p.rollTick <= 0) { p.rollTick = 0.07; $('item').textContent = ItemTable.ITEMS[ItemTable.IDS[Math.floor(Math.random() * ItemTable.IDS.length)]].icon; Sound.sfx.roll(); }
     if (p.rolling <= 0) {
-      giveItem(p, ItemTable.roll(p.rank, total, p.combo));
+      giveItem(p, ItemTable.roll(p.rank, total, p.combo, Math.random, p.laps === 0));
       $('item').classList.remove('rolling'); Sound.sfx.item();
     }
   }
