@@ -40,10 +40,10 @@ button { font-family: var(--font); }
   border-radius: 14px; padding: 2px 14px; font-size: 22px; }
 #q-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
 #q-prompt { font-size: clamp(40px, 5.6vw, 72px); line-height: 1.1; letter-spacing: 1px; }
-#q-prompt.long { font-size: clamp(28px, 3.6vw, 46px); white-space: nowrap; }
+#q-prompt { white-space: nowrap; min-width: 0; overflow: hidden; } /* 넘치면 fitText 가 글자를 줄임 */
 #q-speak { pointer-events: auto; width: 54px; height: 54px; border-radius: 50%; border: 4px solid var(--navy); background: var(--yellow); font-size: 26px; cursor: pointer; flex: none; }
 #q-choices { display: flex; gap: 10px; margin-top: 10px; }
-.choice { flex: 1; font-size: 24px; padding: 6px 4px; border-radius: 14px; border: 3px solid var(--navy); color: #fff; }
+.choice { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; font-size: 24px; padding: 6px 4px; border-radius: 14px; border: 3px solid var(--navy); color: #fff; }
 .c0 { background: #e74c3c; } .c1 { background: #2e86de; } .c2 { background: #1e8449; }
 #q-dist { margin-top: 10px; height: 10px; border-radius: 5px; background: #e3e1d6; overflow: hidden; }
 #q-dist-fill { height: 100%; width: 0; background: linear-gradient(90deg, #ffd84d, #ff7043); }
@@ -187,7 +187,6 @@ button { font-family: var(--font); }
   #touch { bottom: 96px; }
   #touch button { width: 74px; height: 74px; font-size: 17px; }
   #q-prompt { font-size: 40px; }
-  #q-prompt.long { font-size: 26px; }
   .choice { font-size: 20px; }
 }
 @media (hover: none) { .help { display: none; } }

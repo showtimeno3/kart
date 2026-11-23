@@ -164,6 +164,12 @@ function vertical(o, gy, dt) {
 
 
 // ---------- 문제 ----------
+// 글자가 칸을 넘치면 넘치지 않을 때까지 줄임 (긴 문제, 좁은 화면, 긴 철자 보기)
+function fitText(el, min) {
+  el.style.fontSize = '';
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  while (el.scrollWidth > el.clientWidth + 1 && size > min) { size -= 2; el.style.fontSize = size + 'px'; }
+}
 function nextGateFrom(idx) {
   let best = null, bd = Infinity;
   for (const g of game.gates) { const dd = (g.i - idx + N) % N; if (dd > 0 && dd < bd) { bd = dd; best = g; } }
@@ -180,12 +186,12 @@ function updateNextGate() {
     if (best.q.speak) speak(best.q.speak, false); // 앞 문제 단어 읽기가 끝난 뒤 읽음
   }
   $('q-prompt').textContent = best.q.prompt;
-  $('q-prompt').classList.toggle('long', [...best.q.prompt].length > 9); // 긴 문제(시계, 듣기 등)는 한 줄에 들어가게 작게
   $('q-speak').classList.toggle('hidden', !best.q.speak);
   document.querySelectorAll('.choice').forEach((el, k) => { el.textContent = best.q.choices[k]; el.classList.remove('off'); });
   if (best.hintOff != null) document.querySelectorAll('.choice')[best.hintOff].classList.add('off');
   else if (game.p.hint) applyHint(best);
   const qe = $('question'); qe.classList.remove('hidden', 'pop'); void qe.offsetWidth; qe.classList.add('pop'); game.qSize = null;
+  fitText($('q-prompt'), 18); document.querySelectorAll('.choice').forEach((el) => fitText(el, 12)); // 넘칠 때만 글자를 줄임
 }
 
 function onPlayerGate(g) {
