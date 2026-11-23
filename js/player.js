@@ -11,11 +11,13 @@ function endDrift(withBoost) {
   d.on = false; d.charge = 0;
 }
 
+const SURF_SPEED = { sand: 0.8, mud: 0.7 }; // 모래·진흙: 최고 속도 배율
 function updatePlayer(dt) {
   const { p, T, A } = game;
   const racing = game.state === 'race' && !p.finished;
   const ctrl = racing && p.spin <= 0;
   const onGround = p.air < 0.05;
+  const surf = onGround ? T.surf[p.idx] : null; // 노면: 얼음은 미끄럽고, 모래·진흙은 느림
   const steerIn = (ctrl ? (keys.left ? 1 : 0) - (keys.right ? 1 : 0) : 0) * (p.bubble > 0 ? 0.5 : 1); // 비눗방울: 핸들이 둔해짐
   const gas = ctrl && (keys.up || touchMode);
   const brake = ctrl && keys.down;
@@ -27,10 +29,10 @@ function updatePlayer(dt) {
   const fx = Math.sin(p.h), fz = Math.cos(p.h), rx = -fz, rz = fx;
   let vF = p.vel.x * fx + p.vel.z * fz, vR = p.vel.x * rx + p.vel.z * rz;
   const offroad = onGround && Math.abs(p.lat) > HW + 0.8;
-  const max = MAX_SPEED * (p.boost > 0 ? BOOST_MUL : 1) * (p.slow > 0 ? 0.6 : 1) * (offroad && p.boost <= 0 ? 0.6 : 1) * (p.wet > 0 ? 0.85 : 1) * (p.sticky > 0 ? 0.5 : 1);
+  const max = MAX_SPEED * (p.boost > 0 ? BOOST_MUL : 1) * (p.slow > 0 ? 0.6 : 1) * (offroad && p.boost <= 0 ? 0.6 : 1) * (p.wet > 0 ? 0.85 : 1) * (p.sticky > 0 ? 0.5 : 1) * (SURF_SPEED[surf] || 1);
   if (onGround) {
     if (p.boost > 0) vF = Math.min(max, vF + 55 * dt);
-    else if (gas) vF += 17 * Math.max(0.1, 1 - vF / max) * dt; // 빠를수록 가속이 줄어듦
+    else if (gas) vF += 17 * (surf === 'ice' ? 0.8 : 1) * Math.max(0.1, 1 - vF / max) * dt; // 빠를수록 가속이 줄어듦
     if (brake) vF = vF > 0 ? Math.max(0, vF - 32 * dt) : Math.max(-10, vF - 10 * dt);
     if (!gas && !brake && p.boost <= 0) vF -= Math.sign(vF) * Math.min(Math.abs(vF), 5 * dt);
     if (vF > max) vF = Math.max(max, vF - 18 * dt);
@@ -52,7 +54,7 @@ function updatePlayer(dt) {
   if (pressed.drift && !onGround && p.canTrick && !p.tricked && ctrl) {
     p.tricked = true; p.trick = 0.45; Sound.sfx.trick(); flash('트릭!', 'info');
   }
-  vR *= Math.exp(-(d.on ? 2.0 : onGround ? 9 : 1) * dt); // 옆미끄러짐을 잡아주는 접지력
+  vR *= Math.exp(-(d.on ? 2.0 : onGround ? (surf === 'ice' ? 2.5 : 9) : 1) * dt); // 옆미끄러짐을 잡아주는 접지력
 
   const sr = clamp(vF / MAX_SPEED, 0, 1);
   // 멈춰 있어도 가속/브레이크를 누르면 제자리에서 돌 수 있게 (벽에 막혔을 때 빠져나오기)
@@ -137,7 +139,7 @@ function updatePlayer(dt) {
 
   // 차체 움직임: 기울기, 들림, 미끄러지는 각도
   const accel = (vF - p.prevVF) / Math.max(dt, 1e-4); p.prevVF = vF;
-  p.roll = damp(p.roll, clamp(p.yawRate * vF * 0.004, -0.12, 0.12), 8, dt);
+  p.roll = damp(p.roll, clamp(p.yawRate * vF * 0.004, -0.12, 0.12) - Math.atan(T.bank[p.idx]), 8, dt); // 기울어진 커브에서는 차도 기울어짐
   p.pitch = damp(p.pitch, clamp(-accel * 0.003, -0.07, 0.06), 6, dt);
   const slopeTarget = p.air > 0.3 ? -Math.atan(p.vy / Math.max(10, vF)) * 0.6 : -Math.atan(T.slope[p.idx]);
   p.slopeP = damp(p.slopeP, slopeTarget, 10, dt);
@@ -174,6 +176,10 @@ function playerEffects() {
     for (const x of [-0.32, 0.32]) Particles.emit(kartPoint(k, x, 0.8, -2.7), { color: Math.random() < 0.5 ? 0xff9f1c : 0xffe066, vx: p.vel.x * 0.85, vy: 0.5, vz: p.vel.z * 0.85, life: 0.18, size: 0.6, grow: -2, add: true });
   }
   if (p.spin > 0 && Math.random() < 0.5) Particles.emit(kartPoint(k, 0, 2.6, 0), { color: 0xffe135, vy: 3, life: 0.5, size: 0.4, add: true });
+  const surf = p.air < 0.05 ? game.T.surf[p.idx] : null;
+  if ((surf === 'sand' || surf === 'mud') && Math.abs(p.vF) > 8 && Math.random() < 0.7) {
+    for (const x of [-1.1, 1.1]) Particles.emit(kartPoint(k, x, 0.3, -1.5), { color: surf === 'mud' ? 0x6b4423 : 0xe0c08a, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 2, vz: (Math.random() - 0.5) * 4, life: 0.5, size: 0.7, grav: 8, alpha: 0.8 });
+  }
   if (Math.abs(p.lat) > HW + 0.8 && p.air < 0.05 && Math.abs(p.vF) > 10 && Math.random() < 0.6) {
     Particles.emit(kartPoint(k, 0, 0.3, -1.6), { color: 0xc8a46a, vy: 1.5, life: 0.6, size: 0.9, grow: 2, alpha: 0.6 });
   }

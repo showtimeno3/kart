@@ -19,13 +19,17 @@ function sampleTrack(def) {
   const curv = head.map((h, i) => wrapAngle(head[(i + 16) % N] - h));
   const bridge = pos.map((p, i) => !!def.bridge && i / N > def.bridge[0] && i / N < def.bridge[1] && p.y > 1.2);
   const box = new THREE.Box3().setFromPoints(pos);
-  return { pos, right, head, slope, curv, segLen, bridge, box, length: curve.getLength() };
+  const bank = TrackGen.bank(curv); // 커브 기울기 (tan, + 면 오른쪽이 높음)
+  const surf = pos.map((_, i) => TrackGen.surfaceAt(def.surface, i / N)); // 노면 종류 (null = 보통 길)
+  return { pos, right, head, slope, curv, bank, surf, segLen, bridge, box, length: curve.getLength() };
 }
 const uIdx = (u) => ((Math.round(u * N) % N) + N) % N;
 // 도로 위 한 점 (i 번째 샘플, 좌우 lat, 높이 dy)
+// 커브 기울기로 올라가는 높이: 안쪽 가장자리는 그대로(지면 아래로 꺼지지 않게), 바깥쪽만 올라감
+const bankLift = (b, lat) => b * lat + Math.abs(b) * EDGE;
 const roadPoint = (T, i, lat, dy = 0) => {
   const j = ((i % N) + N) % N;
-  return T.pos[j].clone().addScaledVector(T.right[j], lat).setY(T.pos[j].y + dy);
+  return T.pos[j].clone().addScaledVector(T.right[j], lat).setY(T.pos[j].y + dy + bankLift(T.bank[j], lat));
 };
 
 // 두 줄(a(i), b(i)) 사이를 잇는 띠. cond(i) 가 거짓인 구간은 비움.
@@ -67,6 +71,14 @@ function buildTrack(def, scene) {
   const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   strip(scene, off(-HW + 0.8, 0.08), off(-HW + 1.4, 0.08), lineMat, 10);
   strip(scene, off(HW - 1.4, 0.08), off(HW - 0.8, 0.08), lineMat, 10);
+  // 노면 종류 구간: 도로 위 반투명 띠
+  const SURF_LOOK = { ice: ['#cfefff', 0.6], sand: ['#e9c98c', 0.85], mud: ['#7a5230', 0.85] };
+  for (const kind of Object.keys(SURF_LOOK)) {
+    if (!T.surf.includes(kind)) continue;
+    const [color, opacity] = SURF_LOOK[kind];
+    strip(scene, off(-HW, 0.06), off(HW, 0.06), new THREE.MeshLambertMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -2.5, polygonOffsetUnits: -2.5 }), 10, (i) => T.surf[i % N] === kind);
+  }
 
   // 바깥 울타리(빨강/흰 줄무늬 벽)
   const wallTex = canvasTex(128, 32, (c) => { for (let k = 0; k < 4; k++) { c.fillStyle = k % 2 ? '#e53935' : '#ffffff'; c.fillRect(k * 32, 0, 32, 32); } });
@@ -79,8 +91,8 @@ function buildTrack(def, scene) {
   strip(scene, off(-EDGE, -1.2), off(EDGE, -1.2), deck, 10, (i) => T.bridge[i]);
   const skirtMat = M.toon(def.skirt, { side: THREE.DoubleSide, flatShading: true });
   for (const s of [-1, 1]) {
-    strip(scene, off(s * EDGE, -1.2), (i) => roadPoint(T, i, s * (EDGE + pos[i % N].y * def.skirtSlope), 0).setY(-0.1), skirtMat, 10,
-      (i) => !T.bridge[i] && pos[i].y > 0.3);
+    strip(scene, off(s * EDGE, -1.2), (i) => roadPoint(T, i, s * (EDGE + roadPoint(T, i, s * EDGE).y * def.skirtSlope), 0).setY(-0.1), skirtMat, 10,
+      (i) => !T.bridge[i % N] && roadPoint(T, i, s * EDGE).y > 0.3); // 언덕·기울어 올라간 바깥쪽 아래 흙 비탈
   }
   const pillarMats = [];
   for (let i = 0; i < N; i += 14) {
@@ -318,6 +330,7 @@ function decorate(def, T, scene) {
     for (let i = 0; i < N; i += 5) {
       const c = T.curv[i]; if (Math.abs(c) < 0.3 || T.bridge[i]) continue;
       const p = roadPoint(T, i, Math.sign(c) * (EDGE + 2.2));
+      p.y = Math.max(0, roadPoint(T, i, Math.sign(c) * EDGE).y - 2.2 / def.skirtSlope); // 흙 비탈 위에 놓음
       for (let k = 0; k < 3; k++) tires.push([p.x, p.y + 0.55 + k * 1.05, p.z, (i / 5 + k) % 2]);
     }
     if (tires.length) {
@@ -355,7 +368,7 @@ function decorate(def, T, scene) {
   for (let i = 0; i < N; i += 40) {
     if (T.bridge[i]) continue;
     for (const s of [-1, 1]) {
-      const p = roadPoint(T, i, s * (EDGE + 3 + T.pos[i].y * def.skirtSlope));
+      const p = roadPoint(T, i, s * (EDGE + 3 + roadPoint(T, i, s * EDGE).y * def.skirtSlope));
       dm.position.set(p.x, 3.5, p.z); dm.rotation.set(0, T.head[i], 0); dm.updateMatrix(); poles.setMatrixAt(n, dm.matrix);
       dm.position.y = 6.8; dm.rotation.set(0, T.head[i] + Math.PI / 2, 0); dm.updateMatrix(); flags.setMatrixAt(n, dm.matrix);
       flags.setColorAt(n, col.setHex(FLAGC[n % FLAGC.length])); n++;
@@ -436,7 +449,7 @@ function buildAttractions(def, T, scene) {
 // 도로 높이 (점프대 경사 포함)
 function groundY(T, A, idxF, lat) {
   const i0 = Math.floor(idxF) % N, i1 = (i0 + 1) % N, f = idxF - Math.floor(idxF);
-  let y = lerp(T.pos[i0].y, T.pos[i1].y, f);
+  let y = lerp(T.pos[i0].y, T.pos[i1].y, f) + bankLift(lerp(T.bank[i0], T.bank[i1], f), lat);
   for (const r of A.ramps) {
     const s = ((idxF - r.i0 + N) % N) / r.n;
     if (s >= 0 && s <= 1 && Math.abs(lat - r.lat) < r.w / 2) y += r.h * s;

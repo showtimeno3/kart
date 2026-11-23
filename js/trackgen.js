@@ -59,7 +59,18 @@
     return out;
   }
 
-  const api = { build };
+  // 커브 기울기(tan 값): 방향 변화가 클수록 바깥쪽을 높임, 최대 0.14(약 8도). 앞뒤 20 샘플 평균으로 부드럽게. 닫힌 고리.
+  function bank(curv) {
+    const n = curv.length, raw = curv.map((c) => Math.max(-0.14, Math.min(0.14, c * 0.25))), W = 20;
+    return raw.map((_, i) => { let s = 0; for (let k = -W; k <= W; k++) s += raw[(i + k + n) % n]; return s / (2 * W + 1); });
+  }
+  // 노면 종류: [[u0, u1, 'ice'|'sand'|'mud'], ...] 에서 u 의 노면 (u1 < u0 이면 출발선을 넘는 구간)
+  function surfaceAt(list, u) {
+    for (const [u0, u1, kind] of list || []) if (u0 <= u1 ? u >= u0 && u < u1 : u >= u0 || u < u1) return kind;
+    return null;
+  }
+
+  const api = { build, dubins, bank, surfaceAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TrackGen = api;
 })(this);

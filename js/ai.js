@@ -9,7 +9,7 @@ function updateAIs(dt) {
   for (const a of ais) {
     a.boost = Math.max(0, a.boost - dt); a.slow = Math.max(0, a.slow - dt); a.padCd = Math.max(0, a.padCd - dt);
     if (a.spin > 0) a.spin -= dt;
-    let target = racing ? a.base * (a.boost > 0 ? 1.35 : 1) * (a.slow > 0 ? 0.6 : 1) * (a.spin > 0 ? 0.25 : 1) * (a.sticky > 0 ? 0.5 : 1) : 0;
+    let target = racing ? a.base * (a.boost > 0 ? 1.35 : 1) * (a.slow > 0 ? 0.6 : 1) * (a.spin > 0 ? 0.25 : 1) * (a.sticky > 0 ? 0.5 : 1) * (SURF_SPEED[T.surf[a.idx]] || 1) : 0;
     const gap = aiTotal(a) - pt; // 고무줄: 격차가 크면 조금 조절
     if (!p.finished) { if (gap > 160) target *= 0.88; else if (gap < -160) target *= 1.12; }
     a.speed = approach(a.speed, target, (target > a.speed ? 10 : 25) * dt);
@@ -35,7 +35,7 @@ function updateAIs(dt) {
     for (const pd of A.pads) if (a.padCd === 0 && inRange(a.idx, pd.i0 - 4, 8) && Math.abs(a.lat - pd.lat) < 5) { a.boost = Math.max(a.boost, 1.0); a.padCd = 0.6; }
     for (const r of A.ramps) if (crossed(prev, a.idx, r.i1) && Math.abs(a.lat - r.lat) < r.w / 2) a.vy = 8 + r.h * 2 + a.speed * 0.08;
     const inside = a.persona === 'aggro' && Math.abs(T.curv[a.idx]) > 0.1 ? -Math.sign(T.curv[a.idx]) * 4 : 0; // 공격형은 커브 안쪽
-    a.latV = damp(a.latV, (a.latT + inside - a.lat) * 1.4, 3.5, dt);
+    a.latV = damp(a.latV, (a.latT + inside - a.lat) * 1.4, T.surf[a.idx] === 'ice' ? 1.2 : 3.5, dt); // 얼음에서는 옆으로 미끄러짐
     a.lat = clamp(a.lat + a.latV * dt, -(HW - 1.5), HW - 1.5);
     if (racing) {
       a.banana -= dt;
@@ -50,7 +50,7 @@ function updateAIs(dt) {
     a.pos.y = a.y;
     const curv = T.curv[i0], drifting = Math.abs(curv) > 0.22 && a.speed > 26 && a.spin <= 0 && a.y - a.gy < 0.1;
     a.bodyYaw = damp(a.bodyYaw, drifting ? Math.sign(curv) * 0.36 : 0, 5, dt);
-    a.roll = damp(a.roll, clamp(curv * a.speed * 0.012, -0.12, 0.12), 6, dt);
+    a.roll = damp(a.roll, clamp(curv * a.speed * 0.012, -0.12, 0.12) - Math.atan(T.bank[i0]), 6, dt);
     a.wheel += (a.speed * dt) / 0.55;
     if (drifting && Math.random() < 0.6) {
       Particles.emit(kartPoint(a.kart, Math.sign(curv) * 1.2, 0.2, -1.5), { color: 0x9fd0ff, vx: (Math.random() - 0.5) * 5, vy: 2.5, vz: (Math.random() - 0.5) * 5, life: 0.22, size: 0.4, grav: 12, add: true });
