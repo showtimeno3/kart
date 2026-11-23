@@ -1,0 +1,48 @@
+// 트랙 정의 데이터. 브라우저에서는 window.TRACKS, node 에서는 module.exports.
+(function (root) {
+  'use strict';
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const wrapU = (d) => d - Math.round(d); // 한 바퀴 비율 차이를 -0.5~0.5 로
+  const bump = (u, c, w) => Math.exp(-((wrapU(u - c) / w) ** 2));
+  const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+  // turtle: 직선 ['S', 길이] / 원호 ['A', 반경, 각도(+왼쪽)] 를 이어 붙인 모양 (끝은 자동으로 출발점에 닫힘, js/trackgen.js)
+  // elev(u): 한 바퀴 비율 u → 높이. 나머지는 u 위치의 볼거리. 위치는 모두 직선 구간에 오도록 반경을 재서 골랐음.
+  const TRACKS = [
+    {
+      theme: 'meadow', name: '초원 서킷', skyTop: 0x3b8cff, skyBottom: 0xd4f1ff, ground: ['#5cbf4a', '#52b043', '#68c955', '#4aa63c'],
+      shoulder: '#b08a58', skirt: 0x58b247, skirtSlope: 2.2,
+      // 8자: 출발 직선 → 다리(위로 교차) → 오른쪽 커브 → 급커브(반경 45) → S자 → 다리 밑 통과 → 긴 직선과 언덕 → 헤어핀(반경 40) → 개울 → 꽃 터널 → 마지막 헤어핀
+      turtle: [['A', 200, 15], ['S', 250], ['A', 60, -90], ['S', 150], ['A', 90, -60], ['A', 45, -110], ['S', 100], ['A', 60, 35], ['A', 60, -35],
+        ['S', 100], ['A', 120, -100], ['S', 260], ['A', 110, 80], ['S', 120], ['A', 40, 130], ['S', 160], ['A', 80, -50], ['A', 150, 50], ['S', 60]],
+      elev: (u) => 11 * bump(u, 0.068, 0.025) + 6 * bump(u, 0.52, 0.018),
+      bridge: [0.02, 0.12],
+      gates: [0.16, 0.29, 0.48, 0.7, 0.88],
+      items: [0.195, 0.56, 0.8],
+      pads: [[0.03, 0], [0.455, 0], [0.685, 0]],
+      ramps: [[0.34, 9, 11, 1.6, 9], [0.845, -9, 11, 1.6, 9]],
+      movers: { u: 0.615, kind: 'sheep', count: 3 },
+      tunnel: [0.9, 0.95, 'flower'],
+      river: 0.725,
+    },
+    {
+      theme: 'desert', name: '사막 협곡', skyTop: 0x4f9be6, skyBottom: 0xffe6bd, ground: ['#e9c98c', '#dfbb78', '#f1d59f', '#d6b06d'],
+      shoulder: '#c4925c', skirt: 0xc8743f, skirtSlope: 0.35, fog: 0xf3d6a8,
+      // 출발 직선 → 중간 커브 → 빠른 꺾임 → 메사 오르막 → 메사 위 커브 → 절벽 점프 → S자 → 헤어핀(반경 30) → 바위 아치 협곡 → 반대 방향 커브 2개
+      turtle: [['S', 300], ['A', 90, -90], ['S', 120], ['A', 220, -25], ['S', 260], ['A', 60, -70], ['S', 280], ['A', 50, 45], ['A', 50, -45],
+        ['S', 80], ['A', 30, -150], ['S', 220], ['A', 130, 40], ['A', 70, -60]],
+      elev: (u) => 13 * sstep(0.28, 0.37, u) * (1 - sstep(0.48, 0.497, u)),
+      bridge: null,
+      gates: [0.06, 0.2, 0.33, 0.44, 0.575, 0.87],
+      items: [0.1, 0.415, 0.66],
+      pads: [[0.02, 0], [0.3, 9], [0.64, -9]],
+      ramps: [[0.468, 0, 38, 1.8, 10], [0.885, 8, 11, 1.6, 9]],
+      movers: { u: 0.685, kind: 'boulder', count: 3 },
+      tunnel: [0.635, 0.705, 'rock'],
+      river: null,
+    },
+  ];
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = TRACKS;
+  else root.TRACKS = TRACKS;
+})(this);
