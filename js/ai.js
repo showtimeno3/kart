@@ -45,7 +45,8 @@ function updateAIs(dt) {
     a.lat = clamp(a.lat + a.latV * dt, -half, half);
     if (racing) {
       a.banana -= dt;
-      if (a.banana <= 0) { a.banana = a.persona === 'prank' ? 8 + Math.random() * 6 : 14 + Math.random() * 16; dropHazard('banana', a); }
+      // 아이템과 별개로 바나나를 흘리는 것은 장난꾸러기만 (8대가 모두 흘리면 길이 바나나로 덮임)
+      if (a.banana <= 0) { a.banana = 12 + Math.random() * 8; if (a.persona === 'prank') dropHazard('banana', a); }
     }
     if (!a.finished && aiTotal(a) >= LAPS * N) { a.finished = true; a.finishTime = game.t; }
 

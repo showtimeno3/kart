@@ -3,7 +3,7 @@
 'use strict';
 
 const SHOT_SPEED = 70; // 물풍선이 날아가는 속도 (초당 거리)
-const HAZARD = { banana: { r: 2.4, life: 45, effect: 'spin', msg: '미끄덩! 🍌' }, honey: { r: 4.5, life: 20, effect: 'sticky', msg: '끈적끈적! 🍯' },
+const HAZARD = { banana: { r: 2.4, life: 25, effect: 'spin', msg: '미끄덩! 🍌' }, honey: { r: 4.5, life: 20, effect: 'sticky', msg: '끈적끈적! 🍯' },
   ice: { r: 3, life: 10, effect: 'bump', msg: '쿵! 🧊' } };
 
 // ---------- 카트 공통 (플레이어 p 와 컴퓨터 a 를 같은 방식으로 다룸) ----------
