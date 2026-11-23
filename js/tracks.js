@@ -43,6 +43,41 @@
       river: null,
       shortcut: { from: 0.91, to: 0.01, R: 45, surface: 'sand' }, // 모래 지름길 (출발선을 가로지름)
     },
+    {
+      theme: 'snow', name: '눈 산길', skyTop: 0x5d8fd6, skyBottom: 0xe8f2ff, ground: ['#eef4fb', '#e2ebf5', '#f8fbff', '#d6e2ee'],
+      shoulder: '#c9d6e3', skirt: 0xe9f0f7, skirtSlope: 1.6, fog: 0xe3edf8,
+      // 출발 직선 → 큰 왼쪽 커브 → 헤어핀(반경 45) → 오르막 언덕 → 긴 커브 → S자(반경 60) → 두 번째 언덕 → 얼음 호수 → 눈 터널
+      turtle: [['S', 240], ['A', 90, 95], ['S', 130], ['A', 45, -130], ['S', 110], ['A', 55, 150], ['S', 180], ['A', 140, 45], ['S', 140],
+        ['A', 60, -110], ['A', 60, 110], ['S', 120], ['A', 70, 90], ['S', 100], ['A', 110, -50], ['S', 80]],
+      elev: (u) => 9 * bump(u, 0.3, 0.04) + 12 * bump(u, 0.63, 0.035),
+      bridge: null,
+      gates: [0.05, 0.17, 0.36, 0.465, 0.68, 0.9],
+      items: [0.07, 0.45, 0.83],
+      pads: [[0.02, 0], [0.345, -9], [0.75, 0]],
+      ramps: [[0.252, 8, 11, 1.6, 9], [0.87, -8, 11, 1.6, 9]],
+      movers: { u: 0.6, kind: 'snowball', count: 3 },
+      tunnel: [0.92, 0.96, 'snow'],
+      river: null,
+      surface: [[0.5, 0.56, 'ice']],
+      shortcut: { from: 0.74, to: 0.82, R: 55, surface: 'ice' }, // 얼어붙은 호수 가로지르기
+    },
+    {
+      theme: 'coast', name: '해안 도로', skyTop: 0x2f8fe8, skyBottom: 0xc8ecff, ground: ['#f2dca8', '#ead09a', '#f7e6bd', '#e3c58b'],
+      shoulder: '#d9bf8a', skirt: 0xc9a46e, skirtSlope: 0.6, fog: 0xd2efff,
+      // 바닷가 긴 직선(물웅덩이, 게) → 오른쪽 커브 → 안쪽 언덕길 → 헤어핀 → 해안 절벽 위 다리 → 긴 커브 → 마지막 커브
+      turtle: [['S', 480], ['A', 90, -100], ['S', 200], ['A', 60, 70], ['S', 140], ['A', 50, -150], ['S', 260], ['A', 120, -40], ['S', 190],
+        ['A', 70, 60], ['S', 120], ['A', 60, -110]],
+      elev: (u) => 10 * sstep(0.49, 0.53, u) * (1 - sstep(0.585, 0.625, u)),
+      bridge: [0.49, 0.63],
+      gates: [0.1, 0.3, 0.41, 0.55, 0.67, 0.9],
+      items: [0.06, 0.53, 0.8],
+      pads: [[0.02, 0], [0.29, -9], [0.76, 0]],
+      ramps: [[0.32, 8, 11, 1.6, 9], [0.87, -8, 11, 1.6, 9]],
+      movers: { u: 0.13, kind: 'crab', count: 3 },
+      tunnel: null,
+      river: 0.18,
+      shortcut: { from: 0.77, to: 0.85, R: 55, surface: 'sand' }, // 모래사장 지름길
+    },
   ];
 
   if (typeof module !== 'undefined' && module.exports) module.exports = TRACKS;

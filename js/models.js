@@ -339,11 +339,89 @@
     g.scale.setScalar(1.3);
     return g;
   }
-  function boulder() {
+  function boulder(color = 0x8d6e63) {
     const g = new THREE.Group();
-    part(new THREE.DodecahedronGeometry(2.3, 1), toon(0x8d6e63, { flatShading: true }), g, 0, 0, 0, { outline: 1.04 });
+    part(new THREE.DodecahedronGeometry(2.3, 1), toon(color, { flatShading: true }), g, 0, 0, 0, { outline: 1.04 });
     return g;
   }
+  // ---------- 눈 산길 ----------
+  function snowPine() { // 가지마다 눈이 쌓인 전나무
+    const g = new THREE.Group();
+    part(new THREE.CylinderGeometry(0.4, 0.6, 3, 6), toon(0x6b4423), g, 0, 1.5, 0);
+    const leaf = toon(0x1f5f3a, { flatShading: true }), snow = toon(0xf4f8ff, { flatShading: true });
+    [[3.2, 4, 4], [2.5, 3.4, 6.2], [1.7, 2.8, 8.2]].forEach(([r, h, y]) => {
+      part(new THREE.ConeGeometry(r, h, 7), leaf, g, 0, y, 0);
+      part(new THREE.ConeGeometry(r * 0.62, h * 0.42, 7), snow, g, 0, y + h * 0.3, 0, { cast: false });
+    });
+    return g;
+  }
+  function snowman() {
+    const g = new THREE.Group(), white = toon(0xffffff), coal = toon(0x222233);
+    part(new THREE.SphereGeometry(1.6, 14, 12), white, g, 0, 1.4, 0, { outline: 1.04 });
+    part(new THREE.SphereGeometry(1.15, 14, 12), white, g, 0, 3.4, 0, { outline: 1.05 });
+    part(new THREE.SphereGeometry(0.8, 14, 12), white, g, 0, 4.85, 0, { outline: 1.06 });
+    part(new THREE.ConeGeometry(0.14, 0.7, 8), toon(0xff7f27), g, 0, 4.85, 0.95, { rx: Math.PI / 2, cast: false });
+    for (const x of [-0.28, 0.28]) part(new THREE.SphereGeometry(0.09, 6, 4), coal, g, x, 5.05, 0.68, { cast: false });
+    part(new THREE.TorusGeometry(0.75, 0.18, 6, 16), toon(0xe53935), g, 0, 4.2, 0, { rx: Math.PI / 2 });
+    part(new THREE.CylinderGeometry(0.55, 0.55, 0.7, 12), coal, g, 0, 5.75, 0);
+    return g;
+  }
+  // ---------- 해안 도로 ----------
+  function lighthouse() { // 빨강·흰 줄무늬 등대
+    const g = new THREE.Group();
+    part(new THREE.CylinderGeometry(7, 8, 3, 12), toon(0x9a9aa6, { flatShading: true }), g, 0, 1.5, 0);
+    for (let k = 0; k < 6; k++) part(new THREE.CylinderGeometry(3.6 - k * 0.3, 3.9 - k * 0.3, 5, 14), toon(k % 2 ? 0xffffff : 0xe53935), g, 0, 5.5 + k * 5, 0, { outline: 1.02 });
+    part(new THREE.CylinderGeometry(2.4, 2.4, 3, 12), new THREE.MeshBasicMaterial({ color: 0xfff3a0 }), g, 0, 35.5, 0, { cast: false });
+    part(new THREE.ConeGeometry(3.2, 3.2, 12), toon(0x1d2b53), g, 0, 38.6, 0, { outline: 1.03 });
+    return g;
+  }
+  function palm() {
+    const g = new THREE.Group(), bark = toon(0x9c6b3c, { flatShading: true }), leaf = toon(0x2fa84f, { flatShading: true, side: THREE.DoubleSide });
+    let x = 0;
+    for (let k = 0; k < 6; k++) { x += 0.25 * k * 0.3; part(new THREE.CylinderGeometry(0.42 - k * 0.03, 0.5 - k * 0.03, 1.8, 7), bark, g, x, 0.9 + k * 1.7, 0, { rz: -0.08 * k }); }
+    const top = new THREE.Vector3(x + 0.5, 10.6, 0);
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 7) * Math.PI * 2, lf = new THREE.Mesh(new THREE.ConeGeometry(0.9, 5.5, 4), leaf);
+      lf.scale.set(1, 1, 0.18); lf.position.copy(top).add(new THREE.Vector3(Math.cos(a) * 2.4, -0.6, Math.sin(a) * 2.4));
+      lf.rotation.set(0, -a, Math.PI / 2 - 0.35); lf.rotateZ(0); g.add(lf);
+    }
+    for (let k = 0; k < 3; k++) part(new THREE.SphereGeometry(0.35, 8, 6), toon(0x6b4423), g, top.x + Math.cos(k * 2.1) * 0.5, top.y - 0.5, Math.sin(k * 2.1) * 0.5, { cast: false });
+    return g;
+  }
+  function parasol(color) { // 파라솔 + 돗자리
+    const g = new THREE.Group();
+    part(new THREE.CylinderGeometry(0.1, 0.1, 4.2, 6), toon(0xffffff), g, 0, 2.1, 0);
+    part(new THREE.ConeGeometry(2.6, 1.2, 10), toon(color, { flatShading: true }), g, 0, 4.4, 0, { outline: 1.03 });
+    const towel = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3.6), toon(0xffffff - color + 0x202020)); towel.rotation.x = -Math.PI / 2; towel.position.set(1.8, 0.05, 0); g.add(towel);
+    return g;
+  }
+  function crab() { // 옆으로 걷는 게 (다리는 userData.legs)
+    const g = new THREE.Group(), shell = toon(0xff5a36, { flatShading: true }), dark = toon(0x1b1b2f);
+    part(new THREE.SphereGeometry(1.4, 12, 8), shell, g, 0, 1.4, 0, { s: [1.3, 0.6, 1], outline: 1.05 });
+    for (const s of [-1, 1]) {
+      part(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 5), shell, g, s * 0.45, 2.1, 0.7, { cast: false });
+      part(new THREE.SphereGeometry(0.2, 8, 6), toon(0xffffff), g, s * 0.45, 2.55, 0.7, { cast: false });
+      part(new THREE.SphereGeometry(0.1, 6, 4), dark, g, s * 0.45, 2.58, 0.86, { cast: false });
+      part(new THREE.SphereGeometry(0.55, 10, 8), shell, g, s * 1.9, 1.6, 1.0, { s: [1, 0.7, 1.2], outline: 1.06 }); // 집게
+    }
+    const legs = [];
+    for (const s of [-1, 1]) for (let k = 0; k < 3; k++) {
+      const l = new THREE.Group(); l.position.set(s * 1.4, 1.2, -0.6 + k * 0.6); g.add(l);
+      part(new THREE.CylinderGeometry(0.1, 0.08, 1.3, 5), shell, l, s * 0.4, -0.5, 0, { rz: s * 0.6, cast: false });
+      legs.push(l);
+    }
+    g.userData.legs = legs;
+    g.scale.setScalar(1.2);
+    return g;
+  }
+  function gull() { // 갈매기
+    const g = new THREE.Group(), white = toon(0xffffff), grey = toon(0xb9c3cf, { side: THREE.DoubleSide });
+    part(new THREE.CapsuleGeometry(0.35, 1.2, 4, 8), white, g, 0, 0, 0, { rx: Math.PI / 2 });
+    part(new THREE.ConeGeometry(0.12, 0.4, 6), toon(0xffb300), g, 0, 0.05, 1.05, { rx: Math.PI / 2, cast: false });
+    for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.8), grey); w.position.set(s * 1.2, 0.1, 0); w.rotation.set(-Math.PI / 2, 0, s * 0.25); g.add(w); }
+    return g;
+  }
+
   function windmill() {
     const g = new THREE.Group();
     part(new THREE.CylinderGeometry(3, 5, 22, 8), toon(0xfff3e0), g, 0, 11, 0, { outline: 1.02 });
@@ -405,6 +483,6 @@
     });
   }
 
-  root.Models = { SPECIES, toon, part, makeKart, makeBanana, waterBalloon, honeyPuddle, iceWall, shieldBubble, tree, pine, bush, rock, cactus, mesa, cloud, mountain, grandstand, OUTLINE,
+  root.Models = { SPECIES, toon, part, makeKart, makeBanana, waterBalloon, honeyPuddle, iceWall, shieldBubble, snowPine, snowman, lighthouse, palm, parasol, crab, gull, tree, pine, bush, rock, cactus, mesa, cloud, mountain, grandstand, OUTLINE,
     sheep, boulder, windmill, balloon, ramp, instanceScatter, billboard };
 })(this);

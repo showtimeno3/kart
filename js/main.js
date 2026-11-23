@@ -96,7 +96,7 @@ if (simMode) {
   if (simMode === 'race') { keys.up = true; if (hashArgs.has('use')) { giveItem(game.p, hashArgs.get('use')); useItem(); } } // use=아이템: 화면 점검용
   if (hashArgs.get('pause') === '1') togglePause();
 } else if (hashArgs.has('showcase')) { showcase.setSpecies(hashArgs.get('showcase')); showcase.angle = +(hashArgs.get('ang') || 2.6); // 메뉴 캐릭터 화면 점검용
-} else if (location.hash === '#intro') { startRace(); game.introT = 1.2; step(0); }
+} else if (hashArgs.has('intro')) { if (hashArgs.has('track')) settings.track = +hashArgs.get('track'); startRace(); game.introT = 1.2; step(0); } // #intro[&track=n]: 출발 전 연출 화면
 else if (/^#bench/.test(location.hash)) { // #bench[&track=n][&quality=low]: 실제 시간 성능 측정
   const m = /track=(\d)/.exec(location.hash); if (m) settings.track = +m[1];
   settings.quality = /quality=low/.test(location.hash) ? 'low' : 'high';

@@ -239,7 +239,7 @@ const fbm = (x, z, seed, oct = 4) => { let s = 0, a = 0.5, f = 1; for (let o = 0
 function makeTerrain(def, T) {
   const b = T.box, cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2;
   const coarse = T.pos.filter((_, i) => i % 6 === 0).concat(T.sc ? T.sc.pos.filter((_, k) => k % 3 === 0) : []); // 지름길 주변도 평평하게
-  const desert = def.theme === 'desert';
+  const theme = THEMES[def.theme];
   const distTrack = (x, z) => {
     if (x < b.min.x - 300 || x > b.max.x + 300 || z < b.min.z - 300 || z > b.max.z + 300) return 1e4;
     let m = Infinity; for (const p of coarse) { const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < m) m = d; }
@@ -249,31 +249,22 @@ function makeTerrain(def, T) {
     const d = distTrack(x, z), near = sstep(EDGE + 18, EDGE + 120, d);
     if (near <= 0) return 0;
     const rc = Math.hypot(x - cx, z - cz), far = sstep(Math.max(b.max.x - cx, b.max.z - cz) + 250, Math.max(b.max.x - cx, b.max.z - cz) + 750, rc);
-    let hills = desert ? (fbm(x / 160, z / 160, 3) - 0.4) * 34 : (fbm(x / 240, z / 240, 7) - 0.38) * 46;
-    hills = Math.max(0, hills);
-    let mount = Math.pow(fbm(x / 380, z / 380, 11, 5), 1.5) * (desert ? 260 : 340);
-    if (desert) mount = Math.floor(mount / 38) * 38 + sstep(0.7, 1, (mount % 38) / 38) * 38; // 계단 모양 메사
-    return near * lerp(hills, mount, far);
+    return near * theme.height(x, z, far, TR);
   };
-  return { height, distTrack, cx, cz };
+  const TR = { height, distTrack, cx, cz, T };
+  if (theme.prepare) theme.prepare(TR); // 예: 해안 도로의 바다 방향
+  return TR;
 }
 
 function buildTerrain(def, T, scene, TR) {
   const SIZE = 4200, SEG = settings.quality === 'high' ? 230 : 110; // 빠르게: 지형을 덜 촘촘하게
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG); geo.rotateX(-Math.PI / 2); geo.translate(TR.cx, 0, TR.cz);
   const P = geo.attributes.position, col = new Float32Array(P.count * 3), c = new THREE.Color();
-  const desert = def.theme === 'desert';
-  const G = desert ? [0xe9c98c, 0xdcb574, 0xf2d7a2] : [0x5cbf4a, 0x4aa63c, 0x72cf5a];
+  const theme = THEMES[def.theme];
   for (let i = 0; i < P.count; i++) {
     const x = P.getX(i), z = P.getZ(i), h = TR.height(x, z), n = fbm(x / 60, z / 60, 21, 3);
     P.setY(i, h - 0.15);
-    if (desert) {
-      if (h < 6) c.setHex(G[n < 0.4 ? 1 : n > 0.62 ? 2 : 0]);
-      else c.setHex(Math.floor(h / 13) % 2 ? 0xd9824a : 0xc0683a).lerp(new THREE.Color(0xf0b070), clamp((h - 150) / 120, 0, 1)); // 층층이 띠
-    } else if (h < 40) c.setHex(G[n < 0.4 ? 1 : n > 0.62 ? 2 : 0]).lerp(new THREE.Color(0x3f8f3f), clamp(h / 40, 0, 1) * 0.5);
-    else if (h < 150) c.setHex(0x3f8f3f).lerp(new THREE.Color(0x7d8a74), clamp((h - 90) / 60, 0, 1));
-    else if (h < 220) c.setHex(0x8d8f86);
-    else c.setHex(0xf4f7fb); // 눈
+    theme.color(c, h, n, x, z, TR);
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -292,7 +283,6 @@ function decorate(def, T, scene) {
   const TR = makeTerrain(def, T);
   buildTerrain(def, T, scene, TR);
   const rand = (a, c) => a + Math.random() * (c - a);
-  const desert = def.theme === 'desert';
   // 지형 위 자리 찾기: 트랙에서 margin 이상, 너무 높지 않은 곳. mask(x,z) 로 숲처럼 모이게.
   const spots = (count, margin, spread, mask, maxH = 60) => {
     const out = [];
@@ -330,57 +320,8 @@ function decorate(def, T, scene) {
     bl.position.set(TR.cx + Math.cos(a) * r, rand(60, 120), TR.cz + Math.sin(a) * r); bl.userData.baseY = bl.position.y; bl.userData.phase = k;
     scene.add(bl); balloons.push(bl);
   }
-  const spinners = [];
-  if (!desert) {
-    scatter(spots(Math.round(420 * dens), EDGE + 12, 420, forest), M.tree);
-    scatter(spots(Math.round(200 * dens), EDGE + 12, 420, forest, 120), M.pine, 2);
-    scatter(spots(160, EDGE + 7, 250), M.bush);
-    scatter(spots(40, EDGE + 10, 300), () => M.rock(0x9a9aa6), 2, 0.6, 1.6);
-    for (const [x, y, z] of spots(4, EDGE + 45, 220, null, 25)) {
-      const w = M.windmill(); w.position.set(x, y, z); w.rotation.y = Math.random() * 6; scene.add(w); spinners.push(w.userData.rotor);
-    }
-    // 반짝이는 호수 (평평한 곳에만)
-    for (const [x, , z] of spots(4, EDGE + 40, 200, null, 0.5)) {
-      const r = rand(22, 38), pg = new THREE.CircleGeometry(r, 36); pg.rotateX(-Math.PI / 2);
-      const pond = new THREE.Mesh(pg, new THREE.MeshPhongMaterial({ color: 0x3fa9f5, shininess: 90, specular: 0xffffff, transparent: true, opacity: 0.92 }));
-      pond.position.set(x, 0.05, z); pond.scale.set(1, 1, rand(0.6, 1)); scene.add(pond);
-      const rg = new THREE.RingGeometry(r, r + 3, 36); rg.rotateX(-Math.PI / 2);
-      const rim = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ color: 0xe8d9a0 })); rim.position.set(x, 0.06, z); rim.scale.copy(pond.scale); scene.add(rim);
-    }
-    // 꽃과 풀숲 (각각 한 번에 그림)
-    const tuft = (count, geo, colors, margin, spread, yOff) => {
-      const pts = spots(count, margin, spread, null, 30);
-      const im = new THREE.InstancedMesh(geo, M.toon(0xffffff, { flatShading: true }), pts.length);
-      const dm = new THREE.Object3D(), cc = new THREE.Color();
-      pts.forEach(([x, y, z], n) => { dm.position.set(x, y + yOff, z); dm.rotation.set(0, Math.random() * 6, 0); dm.scale.setScalar(rand(0.7, 1.4)); dm.updateMatrix(); im.setMatrixAt(n, dm.matrix); im.setColorAt(n, cc.setHex(colors[n % colors.length])); });
-      im.frustumCulled = false; scene.add(im);
-    };
-    const few = settings.quality === 'high' ? 1 : 0.35;
-    tuft(Math.round(1400 * few), new THREE.SphereGeometry(0.42, 6, 4), [0xff6fa8, 0xffd84d, 0xffffff, 0xb57bff, 0xff7043], EDGE + 4, 140, 0.3);
-    tuft(Math.round(2600 * few), new THREE.ConeGeometry(0.5, 1.8, 4), [0x3f9a3a, 0x56b847, 0x2f7f35], EDGE + 4, 180, 0.8);
-  } else {
-    scatter(spots(Math.round(200 * dens), EDGE + 8, 350), M.cactus);
-    scatter(spots(120, EDGE + 8, 400, null, 120), () => M.rock(0xc0783f), 2, 0.7, 2.2);
-    for (const [x, y, z] of spots(14, EDGE + 60, 380, null, 30)) { const m = M.mesa(rand(30, 70)); m.position.set(x, y, z); scene.add(m); }
-    const tuft = spots(900, EDGE + 4, 200, null, 20);
-    const im = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.9, 0), M.toon(0xffffff, { flatShading: true }), tuft.length);
-    const dm = new THREE.Object3D(), cc = new THREE.Color(), DRY = [0xb59a5a, 0x9c8a4a, 0xc7a96a];
-    tuft.forEach(([x, y, z], n) => { dm.position.set(x, y + 0.5, z); dm.scale.set(rand(0.8, 1.6), rand(0.5, 0.9), rand(0.8, 1.6)); dm.updateMatrix(); im.setMatrixAt(n, dm.matrix); im.setColorAt(n, cc.setHex(DRY[n % 3])); });
-    im.frustumCulled = false; scene.add(im);
-    // 협곡 구간 양옆 바위 절벽
-    if (def.tunnel) {
-      const [u0, u1] = def.tunnel, i0 = uIdx(u0 - 0.03), i1 = uIdx(u1 + 0.03), mats = [];
-      for (let i = i0; i !== i1; i = (i + 1) % N) {
-        if (((i - i0 + N) % N) % 7) continue;
-        for (const s of [-1, 1]) {
-          const p = roadPoint(T, i, s * (EDGE + rand(12, 22)));
-          mats.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, rand(4, 10), p.z), new THREE.Quaternion().setFromAxisAngle(UP, Math.random() * 6), new THREE.Vector3(rand(8, 13), rand(22, 40), rand(8, 13))));
-        }
-      }
-      const tpl = new THREE.Group(); M.part(new THREE.DodecahedronGeometry(1, 0), M.toon(0xc8743f, { flatShading: true }), tpl);
-      M.instanceScatter(scene, tpl, mats);
-    }
-  }
+  const spinners = [], flyers = []; // 도는 것(풍차 날개), 하늘을 도는 것(갈매기 떼)
+  THEMES[def.theme].decorate({ def, T, scene, TR, spots, scatter, rand, dens, few: settings.quality === 'high' ? 1 : 0.35, forest, spinners, flyers });
   // 급커브 바깥쪽 타이어 벽 (빨강/흰 줄무늬)
   {
     const tires = [];
@@ -399,8 +340,7 @@ function decorate(def, T, scene) {
   }
   // 직선 구간 광고판 (가상의 대회 문구)
   {
-    const TEXT = desert ? ['🏜️ 사막 수학 랠리', '정답 = 부스터 🚀', '구구단 챔피언 도전!', 'ABC 레이싱 리그', '천천히, 정확하게!', '오늘도 최고야 ⭐']
-      : ['🏁 공부 카트 그랑프리', '정답 = 부스터 🚀', '구구단 챔피언 도전!', 'ABC 레이싱 리그', '천천히, 정확하게!', '오늘도 최고야 ⭐'];
+    const TEXT = THEMES[def.theme].signs;
     const COL = [['#ffd84d', '#1d2b53'], ['#ff7043', '#ffffff'], ['#2e86de', '#ffffff'], ['#fffdf5', '#1d2b53'], ['#1e8449', '#ffffff'], ['#ab47bc', '#ffffff']];
     let k = 0;
     for (let i = 60; i < N && k < TEXT.length; i += 37) {
@@ -434,7 +374,7 @@ function decorate(def, T, scene) {
   }
   poles.count = flags.count = n; poles.frustumCulled = flags.frustumCulled = false;
   scene.add(poles, flags);
-  return { balloons, spinners, sunSprite };
+  return { balloons, spinners, flyers, sunSprite };
 }
 
 // ---------- 볼거리: 점프대, 부스터 발판, 터널, 개울, 움직이는 장애물 ----------
@@ -466,12 +406,12 @@ function buildAttractions(def, T, scene) {
     const step = kind === 'flower' ? 10 : 22, mats = [], cols = [];
     for (let i = i0; i !== i1; i = (i + 1) % N) {
       if (((i - i0 + N) % N) % step) continue;
-      const sc = kind === 'rock' ? 0.9 + Math.random() * 0.35 : 1;
+      const sc = kind !== 'flower' ? 0.9 + Math.random() * 0.35 : 1;
       mats.push(new THREE.Matrix4().compose(T.pos[i].clone().setY(T.pos[i].y - 0.5), new THREE.Quaternion().setFromAxisAngle(UP, T.head[i]), new THREE.Vector3(1, sc, 1)));
       cols.push(((i - i0 + N) % N) / step % 2);
     }
     const geo = kind === 'flower' ? new THREE.TorusGeometry(EDGE + 1.5, 1.1, 8, 28, Math.PI) : new THREE.TorusGeometry(EDGE + 6, 4.5, 6, 14, Math.PI);
-    const mat = kind === 'flower' ? M.toon(0xffffff) : M.toon(0xc8743f, { flatShading: true });
+    const mat = kind === 'flower' ? M.toon(0xffffff) : M.toon(kind === 'snow' ? 0xf4f8ff : 0xc8743f, { flatShading: true }); // 눈 터널은 흰 아치
     const im = new THREE.InstancedMesh(geo, mat, mats.length);
     const PAL = [new THREE.Color(0xff6fa8), new THREE.Color(0xffd84d)];
     mats.forEach((m, k) => { im.setMatrixAt(k, m); if (kind === 'flower') im.setColorAt(k, PAL[cols[k]]); });
@@ -496,7 +436,7 @@ function buildAttractions(def, T, scene) {
   if (def.movers) {
     const { u, kind, count } = def.movers;
     for (let k = 0; k < count; k++) {
-      const mesh = kind === 'sheep' ? M.sheep() : M.boulder();
+      const mesh = kind === 'sheep' ? M.sheep() : kind === 'crab' ? M.crab() : M.boulder(kind === 'snowball' ? 0xf4f8ff : undefined);
       scene.add(mesh);
       A.movers.push({ mesh, kind, i: (uIdx(u) + k * 14) % N, amp: HW - 2, w: 0.45 + k * 0.17, ph: k * 2.1, lat: 0, cd: 0, pos: new THREE.Vector3() });
     }

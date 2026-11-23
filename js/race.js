@@ -114,7 +114,7 @@ function startRace() {
   $('intro-sub').textContent = `${LAPS}바퀴 · 문제 ${def.gates.length * LAPS}개`;
   $('lights').classList.add('hidden'); $('lights').className = 'hidden'; $('banner').className = ''; $('wrongway').classList.add('hidden');
   applyQuality();
-  if (bloomPass) bloomPass.strength = def.theme === 'desert' ? 0.1 : 0.22; // 밝은 모래 지평선이 하얗게 번지지 않게
+  if (bloomPass) bloomPass.strength = THEMES[def.theme].bloom;
   if (window.Music) Music.play(def.theme);
   updateKartMeshes();
   camera.position.set(p.pos.x - Math.sin(p.h) * 9, p.y + 3.6, p.pos.z - Math.cos(p.h) * 9);

@@ -41,7 +41,7 @@ function run(hash, extra = []) {
       while ((k = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, k); buf = buf.slice(k + 1);
         if (/CONSOLE/.test(line) && /Uncaught|Error/.test(line) && !/runtime.lastError/.test(line)) errors.push(line.trim().slice(0, 300));
-        const m = /"(?:SIM|BENCH) (\{.*\})"/.exec(line); // #bench 는 BENCH 로 출력
+        const m = /"(?:SIM|BENCH|AUDIO) (\{.*\})"/.exec(line); // #bench 는 BENCH, #audiotest 는 AUDIO 로 출력
         if (m) { result = JSON.parse(m[1].replace(/\\"/g, '"')); finish('ok'); return; }
       }
     });

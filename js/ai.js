@@ -110,9 +110,10 @@ function updateMovers(dt) {
     const ph = game.t * m.w + m.ph, lat = Math.sin(ph) * m.amp, vlat = Math.cos(ph);
     m.pos.copy(roadPoint(T, m.i, lat));
     m.mesh.position.copy(m.pos);
-    if (m.kind === 'sheep') {
+    const walker = m.kind === 'sheep' || m.kind === 'crab'; // 걷는 것(양, 게) / 구르는 것(바위, 눈덩이)
+    if (walker) {
       m.mesh.position.y += Math.abs(Math.sin(game.t * 9 + m.ph)) * 0.3;
-      m.mesh.rotation.y = T.head[m.i] + (vlat > 0 ? -Math.PI / 2 : Math.PI / 2);
+      m.mesh.rotation.y = T.head[m.i] + (m.kind === 'crab' ? 0 : vlat > 0 ? -Math.PI / 2 : Math.PI / 2); // 게는 옆으로 걸음
       m.mesh.userData.legs.forEach((l, k) => { l.rotation.x = Math.sin(game.t * 12 + k * Math.PI) * 0.5; });
     } else {
       m.mesh.position.y += 2.3;
@@ -122,7 +123,7 @@ function updateMovers(dt) {
     const dx = p.pos.x - m.pos.x, dz = p.pos.z - m.pos.z, dd = Math.hypot(dx, dz);
     if (dd < 3.4 && m.cd === 0 && p.air < 1.5) {
       m.cd = 1; p.vel.multiplyScalar(0.3); p.vel.x += (dx / dd) * 6; p.vel.z += (dz / dd) * 6; p.slow = Math.max(p.slow, 0.8);
-      p.shake = 0.7; Sound.sfx.bump(); flash(m.kind === 'sheep' ? '음매~ 🐑' : '쿵! 🪨', 'bad');
+      p.shake = 0.7; Sound.sfx.bump(); flash({ sheep: '음매~ 🐑', crab: '집게! 🦀', snowball: '눈덩이! ☃️' }[m.kind] || '쿵! 🪨', 'bad');
       if (m.kind === 'sheep') Sound.sfx.baa();
       if (p.drift.on) endDrift(false);
     }
