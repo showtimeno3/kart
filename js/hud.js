@@ -15,6 +15,10 @@ function buildMinimap(T) {
   const path = () => { c.beginPath(); T.pos.forEach((v, i) => { const [x, y] = map(v); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath(); };
   path(); c.strokeStyle = '#1d2b53'; c.lineWidth = 11; c.stroke();
   path(); c.strokeStyle = '#fffdf5'; c.lineWidth = 6; c.stroke();
+  if (T.sc) { // 지름길: 가는 점선
+    c.beginPath(); T.sc.pos.forEach((v, k) => { const [x, y] = map(v); k ? c.lineTo(x, y) : c.moveTo(x, y); });
+    c.setLineDash([4, 3]); c.strokeStyle = '#c8a46a'; c.lineWidth = 3; c.stroke(); c.setLineDash([]);
+  }
   return { bg, map, ctx: cv.getContext('2d'), W };
 }
 function drawMinimap() {
@@ -79,7 +83,7 @@ function updateHUD(dt) {
     }
   } else { cd.textContent = ''; lights.className = 'hidden'; }
   // 거꾸로 가기 경고
-  const t = game.T.right[p.idx], dot = Math.sin(p.h) * t.z - Math.cos(p.h) * t.x;
+  const t = p.onSc ? game.T.sc.right[p.scK] : game.T.right[p.idx], dot = Math.sin(p.h) * t.z - Math.cos(p.h) * t.x;
   game.wrongT = game.state === 'race' && !p.finished && dot < -0.3 && Math.abs(p.vF) > 3 ? game.wrongT + dt : 0;
   $('wrongway').classList.toggle('hidden', game.wrongT < 1);
   // 첫 경기 안내

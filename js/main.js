@@ -45,14 +45,22 @@ requestAnimationFrame(frame);
 
 // 자동 점검용 자율주행: index.html#sim=초 → 그 시간만큼 빠르게 진행 후 결과를 콘솔에 출력
 const hashArgs = new URLSearchParams(location.hash.slice(1)); // 순서 상관없이 받음
-const simDrift = hashArgs.get('drift') === '1';
+const simDrift = hashArgs.get('drift') === '1', simShortcut = hashArgs.get('shortcut') === '1';
 // 앞쪽 목표점을 따라가는 단순 추종 (회전 지연을 고려해 yawRate 로 보정), 정답 차선으로 이동
 function autopilot() {
   const { T, p } = game, g = game.nextGate;
   const target = g && g.q && ((g.i - p.idx + N) % N) * T.segLen < 320 ? [-LANE, 0, LANE][g.q.answer] : 0;
-  const ahead = (p.idx + 10 + Math.round(Math.max(0, p.vF) * 0.4)) % N, aim = T.pos[ahead].clone().addScaledVector(T.right[ahead], target);
+  const ahead = (p.idx + 10 + Math.round(Math.max(0, p.vF) * 0.4)) % N;
+  let aim = T.pos[ahead].clone().addScaledVector(T.right[ahead], target);
+  const sc = T.sc; // shortcut=1: 갈림점을 지나면 지름길 중심선을 따라감
+  if (simShortcut && sc && (sc.i0 - p.idx + N) % N < 60) aim = T.pos[ahead].clone().addScaledVector(T.right[ahead], sc.lat0); // 갈림점 전에 그쪽 차선으로
+  if (simShortcut && sc && (p.idx - sc.i0 + N) % N < 12) p.scGo = true; // 갈림점에서 지름길로 가기로 함
+  if (p.scGo && !p.onSc && (p.idx - sc.i1 + N) % N < 30) p.scGo = false; // 출구를 지남
+  if (p.scGo) aim = sc.pos[Math.min(sc.n - 1, scNearest(T, p.pos)[0] + 10 + Math.round(Math.max(0, p.vF) * 0.4))].clone();
   const err = wrapAngle(Math.atan2(aim.x - p.pos.x, aim.z - p.pos.z) - p.h) - p.yawRate * 0.1;
   keys.up = true; keys.left = err > 0.015; keys.right = err < -0.015;
+  keys.down = !!p.scGo && Math.abs(err) > 0.35 && p.vF > 20; // 지름길 급한 입구: 많이 틀어지면 감속
+  if (keys.down) keys.up = false;
 }
 function simulate(seconds) {
   skipIntro(); step(1 / 30);
@@ -74,7 +82,7 @@ function simulate(seconds) {
   console.log('SIM ' + JSON.stringify({ state: game.state, t: game.t.toFixed(1), laps: p.laps, rank: p.rank,
     stats: game.stats.total + '/' + game.stats.correct, drifts: game.stats.drifts || 0, walls: game.stats.walls || 0, spins: game.stats.spins || 0,
     miss: game.stats.wrong.map((w) => w.want + ':' + w.lat), len: Math.round(T.length), gateGaps: gaps,
-    airMax: +airMax.toFixed(1), items: game.stats.items, shieldBlocks: game.stats.shieldBlocks, hits: game.stats.hits, avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
+    airMax: +airMax.toFixed(1), items: game.stats.items, shieldBlocks: game.stats.shieldBlocks, hits: game.stats.hits, scUsed: game.stats.scUsed || 0, avgKmh: Math.round((vSum / Math.max(1, steps)) * KMH), ai: game.ais.map((a) => (aiTotal(a) / N).toFixed(2)) }));
 }
 window.__eduKart = { get game() { return game; }, startRace, settings, Sound };
 

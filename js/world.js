@@ -21,8 +21,44 @@ function sampleTrack(def) {
   const box = new THREE.Box3().setFromPoints(pos);
   const bank = TrackGen.bank(curv); // 커브 기울기 (tan, + 면 오른쪽이 높음)
   const surf = pos.map((_, i) => TrackGen.surfaceAt(def.surface, i / N)); // 노면 종류 (null = 보통 길)
-  return { pos, right, head, slope, curv, bank, surf, segLen, bridge, box, length: curve.getLength() };
+  const T = { pos, right, head, slope, curv, bank, surf, segLen, bridge, box, length: curve.getLength() };
+  if (def.shortcut) T.sc = sampleShortcut(def.shortcut, T, tan);
+  if (T.sc) box.expandByPoint(T.sc.box.min).expandByPoint(T.sc.box.max);
+  return T;
 }
+
+// ---------- 지름길: 본 도로 두 지점을 반경 R 원호-직선-원호로 잇는 좁은 길 (js/trackgen.js dubins) ----------
+const SHW = 7, SC_OFFSET = 16; // 지름길 반폭 (양옆 갓길 2 는 따로), 지름길 양 끝을 본 도로 가장자리 쪽으로 옮기는 거리 (test/tracks.test.js 와 같게)
+function sampleShortcut(sc, T, tan) {
+  const i0 = uIdx(sc.from), i1 = uIdx(sc.to);
+  const pose = (i) => [T.pos[i].x, T.pos[i].z, Math.atan2(tan[i].z, tan[i].x)];
+  const raw = TrackGen.shortcutPath(pose(i0), pose(i1), sc.R, T.segLen, SC_OFFSET);
+  const n = raw.length, y0 = T.pos[i0].y, y1 = T.pos[i1].y;
+  const pos = raw.map(([x, z], k) => new THREE.Vector3(x, lerp(y0, y1, k / (n - 1)), z));
+  const head = [], right = [];
+  let len = 0;
+  pos.forEach((p, k) => {
+    const a = pos[Math.max(0, k - 1)], b = pos[Math.min(n - 1, k + 1)], dx = b.x - a.x, dz = b.z - a.z;
+    head.push(Math.atan2(dx, dz));
+    right.push(new THREE.Vector3(-dz, 0, dx).normalize()); // 본 도로와 같은 방향 규칙: 오른쪽 = 진행 방향 × 위
+    if (k) len += p.distanceTo(pos[k - 1]);
+  });
+  const step = len / (n - 1);
+  // 반폭: 양 끝 90 거리 안에서는 깔때기처럼 넓어짐(최대 21) → 본 도로와 지름길 사이에 틈(벽)이 생기지 않고, 급한 입구도 넓게 돌 수 있음
+  const half = pos.map((_, k) => SHW + 14 * (1 - sstep(0, 90, Math.min(k, n - 1 - k) * step)));
+  const lat0 = (pos[0].x - T.pos[i0].x) * T.right[i0].x + (pos[0].z - T.pos[i0].z) * T.right[i0].z; // 지름길 시작점의 본 도로 기준 옆 위치
+  return { pos, head, right, half, lat0, n, i0, i1, span: (i1 - i0 + N) % N, len, step, surf: sc.surface, box: new THREE.Box3().setFromPoints(pos) };
+}
+// 지름길 위 가장 가까운 점 k 와 옆 거리 lat
+function scNearest(T, v) {
+  const sc = T.sc; let best = 0, bd = Infinity;
+  for (let k = 0; k < sc.n; k++) { const q = sc.pos[k], dd = (q.x - v.x) ** 2 + (q.z - v.z) ** 2; if (dd < bd) { bd = dd; best = k; } }
+  const q = sc.pos[best], r = sc.right[best];
+  return [best, (v.x - q.x) * r.x + (v.z - q.z) * r.z, Math.sqrt(bd)];
+}
+const scPoint = (T, k, lat, dy = 0) => { const sc = T.sc, j = clamp(k, 0, sc.n - 1); return sc.pos[j].clone().addScaledVector(sc.right[j], lat).setY(sc.pos[j].y + dy); };
+// p 가 지름길 길 폭 + margin 안에 있는가
+const nearShortcut = (T, p, margin) => { if (!T.sc) return false; const [k, , sd] = scNearest(T, p); return sd < T.sc.half[k] + margin; };
 const uIdx = (u) => ((Math.round(u * N) % N) + N) % N;
 // 도로 위 한 점 (i 번째 샘플, 좌우 lat, 높이 dy)
 // 커브 기울기로 올라가는 높이: 안쪽 가장자리는 그대로(지면 아래로 꺼지지 않게), 바깥쪽만 올라감
@@ -33,15 +69,15 @@ const roadPoint = (T, i, lat, dy = 0) => {
 };
 
 // 두 줄(a(i), b(i)) 사이를 잇는 띠. cond(i) 가 거짓인 구간은 비움.
-function strip(scene, a, b, mat, uvLen, cond) {
+function strip(scene, a, b, mat, uvLen, cond, n = N) { // n: 조각 수 (본 도로는 닫힌 고리 N)
   const v = [], uv = [], idx = [];
-  for (let i = 0; i <= N; i++) {
+  for (let i = 0; i <= n; i++) {
     const A = a(i), B = b(i);
     v.push(A.x, A.y, A.z, B.x, B.y, B.z);
     const vv = (i * (scene.userData.segLen || 1)) / uvLen; uv.push(0, vv, 1, vv);
   }
-  for (let i = 0; i < N; i++) {
-    if (cond && !(cond(i) && cond((i + 1) % N))) continue;
+  for (let i = 0; i < n; i++) {
+    if (cond && !(cond(i) && cond(n === N ? (i + 1) % N : i + 1))) continue;
     const k = 2 * i; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
   }
   if (!idx.length) return null;
@@ -84,8 +120,11 @@ function buildTrack(def, scene) {
   const wallTex = canvasTex(128, 32, (c) => { for (let k = 0; k < 4; k++) { c.fillStyle = k % 2 ? '#e53935' : '#ffffff'; c.fillRect(k * 32, 0, 32, 32); } });
   wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
   const wallMat = new THREE.MeshLambertMaterial({ map: wallTex, side: THREE.DoubleSide });
-  strip(scene, off(-EDGE, -1.2), off(-EDGE, 1.3), wallMat, 8);
-  strip(scene, off(EDGE, -1.2), off(EDGE, 1.3), wallMat, 8);
+  // 지름길이 본 도로 벽을 지나가는 곳은 벽을 비움
+  T.wallGap = [-1, 1].map((s) => pos.map((_, i) => nearShortcut(T, roadPoint(T, i, s * EDGE), 2.5)));
+  strip(scene, off(-EDGE, -1.2), off(-EDGE, 1.3), wallMat, 8, (i) => !T.wallGap[0][i % N]);
+  strip(scene, off(EDGE, -1.2), off(EDGE, 1.3), wallMat, 8, (i) => !T.wallGap[1][i % N]);
+  if (T.sc) buildShortcut(def, T, scene, wallMat);
   // 다리: 바닥판과 기둥 / 언덕: 흙 비탈
   const deck = flat(0xc9c3b6, 0);
   strip(scene, off(-EDGE, -1.2), off(EDGE, -1.2), deck, 10, (i) => T.bridge[i]);
@@ -123,6 +162,7 @@ function buildTrack(def, scene) {
   for (let i = 0; i < N; i += 3) {
     const pitch = -Math.atan(T.slope[i]);
     for (const s of [-1, 1]) {
+      if (T.wallGap[(s + 1) / 2][i]) continue; // 지름길 입구에는 연석 없음
       dummy.position.copy(roadPoint(T, i, s * (HW + 0.7), 0.12));
       dummy.rotation.set(pitch, head[i], s * 0.12, 'YXZ'); dummy.updateMatrix();
       curbs.setMatrixAt(c, dummy.matrix); curbs.setColorAt(c, (i / 3) % 2 ? red : white); c++;
@@ -155,9 +195,26 @@ function buildTrack(def, scene) {
   startBanner.position.set(0, 12, -0.55); startBanner.rotation.y = Math.PI; arch.add(startBanner);
   const back = startBanner.clone(); back.position.z = 0.55; back.rotation.y = 0; arch.add(back);
   const si = N - 40, stand = M.grandstand(60);
-  stand.position.copy(roadPoint(T, si, -(EDGE + 6))); stand.rotation.y = head[si] - Math.PI / 2;
+  stand.position.copy(roadPoint(T, si, -(EDGE + 6)));
+  if (nearShortcut(T, stand.position, 38)) { stand.position.copy(roadPoint(T, si, EDGE + 6)); stand.rotation.y = head[si] + Math.PI / 2; } else stand.rotation.y = head[si] - Math.PI / 2;
   scene.add(stand);
   return T;
+}
+
+function buildShortcut(def, T, scene, wallMat) {
+  const sc = T.sc, n = sc.n - 1, at = (side, extra, dy) => (k) => scPoint(T, k, side * (sc.half[clamp(k, 0, sc.n - 1)] + extra), dy);
+  const flat = (color, f) => new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: f, polygonOffsetUnits: f });
+  const SURF_COLOR = { mud: 0x7a5230, sand: 0xe2c48a, ice: 0xcfefff };
+  // 본 도로와 겹치는 갈림길에서는 본 도로 아스팔트가 위에 그려지게 (polygonOffset 이 아스팔트보다 약함)
+  strip(scene, at(-1, 0, 0.03), at(1, 0, 0.03), flat(SURF_COLOR[sc.surf], -1), 10, null, n);
+  strip(scene, at(-1, 2, 0.02), at(-1, 0, 0.02), flat(def.shoulder, -0.5), 10, null, n);
+  strip(scene, at(1, 0, 0.02), at(1, 2, 0.02), flat(def.shoulder, -0.5), 10, null, n);
+  // 지름길 벽: 본 도로 안에 들어가는 부분(갈림길)은 비움
+  const hidden = [-1, 1].map((s) => sc.pos.map((_, k) => {
+    const p = scPoint(T, k, s * (sc.half[k] + 2)), i = nearest(T, p, k < sc.n / 2 ? sc.i0 : sc.i1);
+    return Math.hypot(T.pos[i].x - p.x, T.pos[i].z - p.z) < EDGE + 1;
+  }));
+  [-1, 1].forEach((s, m) => strip(scene, at(s, 2, -0.6), at(s, 2, 1.0), wallMat, 8, (k) => !hidden[m][k], n));
 }
 
 function farFromTrack(T, x, z, margin) {
@@ -181,7 +238,7 @@ const fbm = (x, z, seed, oct = 4) => { let s = 0, a = 0.5, f = 1; for (let o = 0
 
 function makeTerrain(def, T) {
   const b = T.box, cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2;
-  const coarse = T.pos.filter((_, i) => i % 6 === 0);
+  const coarse = T.pos.filter((_, i) => i % 6 === 0).concat(T.sc ? T.sc.pos.filter((_, k) => k % 3 === 0) : []); // 지름길 주변도 평평하게
   const desert = def.theme === 'desert';
   const distTrack = (x, z) => {
     if (x < b.min.x - 300 || x > b.max.x + 300 || z < b.min.z - 300 || z > b.max.z + 300) return 1e4;
@@ -328,7 +385,7 @@ function decorate(def, T, scene) {
   {
     const tires = [];
     for (let i = 0; i < N; i += 5) {
-      const c = T.curv[i]; if (Math.abs(c) < 0.3 || T.bridge[i]) continue;
+      const c = T.curv[i]; if (Math.abs(c) < 0.3 || T.bridge[i] || nearShortcut(T, roadPoint(T, i, Math.sign(c) * EDGE), 6)) continue;
       const p = roadPoint(T, i, Math.sign(c) * (EDGE + 2.2));
       p.y = Math.max(0, roadPoint(T, i, Math.sign(c) * EDGE).y - 2.2 / def.skirtSlope); // 흙 비탈 위에 놓음
       for (let k = 0; k < 3; k++) tires.push([p.x, p.y + 0.55 + k * 1.05, p.z, (i / 5 + k) % 2]);
@@ -369,6 +426,7 @@ function decorate(def, T, scene) {
     if (T.bridge[i]) continue;
     for (const s of [-1, 1]) {
       const p = roadPoint(T, i, s * (EDGE + 3 + roadPoint(T, i, s * EDGE).y * def.skirtSlope));
+      if (nearShortcut(T, p, 4)) continue; // 지름길 입구를 막지 않게
       dm.position.set(p.x, 3.5, p.z); dm.rotation.set(0, T.head[i], 0); dm.updateMatrix(); poles.setMatrixAt(n, dm.matrix);
       dm.position.y = 6.8; dm.rotation.set(0, T.head[i] + Math.PI / 2, 0); dm.updateMatrix(); flags.setMatrixAt(n, dm.matrix);
       flags.setColorAt(n, col.setHex(FLAGC[n % FLAGC.length])); n++;

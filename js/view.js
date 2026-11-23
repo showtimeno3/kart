@@ -24,9 +24,10 @@ function updateKartMeshes() {
     const i0 = Math.floor((a.d / T.segLen) % N) % N;
     const spin = a.spin > 0 ? a.spin * 12.5 : 0;
     const air = a.y - a.gy;
-    poseKart(a.kart, a.pos.x, a.y, a.pos.z, T.head[i0] + a.latV * 0.03 + a.bodyYaw + spin,
-      air > 0.3 ? -Math.atan(a.vy / Math.max(10, a.speed)) * 0.6 : -Math.atan(T.slope[i0]), a.roll, 0,
-      clamp(T.curv[i0] * 2.2, -1, 1), a.wheel, Math.sin(game.t * 29 + a.d) * 0.02, 0);
+    const onSc = !!a.sc && T.sc; // 지름길에서는 지름길 방향
+    poseKart(a.kart, a.pos.x, a.y, a.pos.z, (onSc ? T.sc.head[a.scK || 0] : T.head[i0]) + a.latV * 0.03 + a.bodyYaw + spin,
+      air > 0.3 ? -Math.atan(a.vy / Math.max(10, a.speed)) * 0.6 : onSc ? 0 : -Math.atan(T.slope[i0]), a.roll, 0,
+      onSc ? 0 : clamp(T.curv[i0] * 2.2, -1, 1), a.wheel, Math.sin(game.t * 29 + a.d) * 0.02, 0);
     a.kart.flames.forEach((f) => { f.visible = a.boost > 0; });
     a.kart.root.updateMatrixWorld();
   }

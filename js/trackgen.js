@@ -70,7 +70,17 @@
     return null;
   }
 
-  const api = { build, dubins, bank, surfaceAt };
+  // 지름길 중심선: 두 자세(위치 + 표준 각도) 사이 dubins 경로. 지름길이 갈라질 쪽으로 양 끝을 offset 만큼 옮겨서
+  // 본 도로 가장자리에서 나란히 시작·끝나게 함 (본 도로와 지름길이 처음부터 겹친 채 서서히 갈라짐)
+  function shortcutPath(a, b, R, step, offset) {
+    const base = dubins(a, b, R, step), n = base.length, m = Math.min(12, n - 1);
+    const side = (p, q) => Math.sign((q[0] - p[0]) * -Math.sin(p[2]) + (q[1] - p[1]) * Math.cos(p[2])) || 1; // 왼쪽(표준) +
+    const s0 = side(a, base[m]), s1 = side(b, base[n - 1 - m]);
+    const move = (p, s) => [p[0] - Math.sin(p[2]) * offset * s, p[1] + Math.cos(p[2]) * offset * s, p[2]];
+    return dubins(move(a, s0), move(b, s1), R, step);
+  }
+
+  const api = { build, dubins, shortcutPath, bank, surfaceAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TrackGen = api;
 })(this);

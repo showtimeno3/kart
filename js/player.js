@@ -17,7 +17,7 @@ function updatePlayer(dt) {
   const racing = game.state === 'race' && !p.finished;
   const ctrl = racing && p.spin <= 0;
   const onGround = p.air < 0.05;
-  const surf = onGround ? T.surf[p.idx] : null; // 노면: 얼음은 미끄럽고, 모래·진흙은 느림
+  const surf = onGround ? (p.onSc ? T.sc.surf : T.surf[p.idx]) : null; // 노면: 얼음은 미끄럽고, 모래·진흙은 느림
   const steerIn = (ctrl ? (keys.left ? 1 : 0) - (keys.right ? 1 : 0) : 0) * (p.bubble > 0 ? 0.5 : 1); // 비눗방울: 핸들이 둔해짐
   const gas = ctrl && (keys.up || touchMode);
   const brake = ctrl && keys.down;
@@ -36,7 +36,7 @@ function updatePlayer(dt) {
     if (brake) vF = vF > 0 ? Math.max(0, vF - 32 * dt) : Math.max(-10, vF - 10 * dt);
     if (!gas && !brake && p.boost <= 0) vF -= Math.sign(vF) * Math.min(Math.abs(vF), 5 * dt);
     if (vF > max) vF = Math.max(max, vF - 18 * dt);
-    vF -= T.slope[p.idx] * G * 0.35 * dt; // 오르막은 느려지고 내리막은 빨라짐
+    vF -= (p.onSc ? 0 : T.slope[p.idx]) * G * 0.35 * dt; // 오르막은 느려지고 내리막은 빨라짐
   }
   if (p.spin > 0) { p.spin -= dt; p.spinA += dt * 12.5; vF *= Math.exp(-2.4 * dt); vR *= Math.exp(-2 * dt); } else p.spinA = 0;
 
@@ -69,17 +69,30 @@ function updatePlayer(dt) {
   p.pos.addScaledVector(p.vel, dt);
   p.vF = vF;
 
-  // 트랙 위치와 벽
+  // 트랙 위치와 벽. 지름길이 있으면 본 도로와 지름길 중 어느 쪽 길 안에 있는지 봄
   const prev = p.idx;
-  p.idx = nearest(T, p.pos, p.idx);
-  const c = T.pos[p.idx], rv = T.right[p.idx];
-  const fwdOff = (p.pos.x - c.x) * rv.z - (p.pos.z - c.z) * rv.x; // 샘플 앞뒤 어긋남 (진행 방향 = (right.z, -right.x))
-  p.idxF = (p.idx + clamp(fwdOff / T.segLen, -0.5, 0.5) + N) % N;
-  p.lat = (p.pos.x - c.x) * rv.x + (p.pos.z - c.z) * rv.z;
+  const mi = nearest(T, p.pos, p.idx), c = T.pos[mi], rvM = T.right[mi];
+  const fwdOff = (p.pos.x - c.x) * rvM.z - (p.pos.z - c.z) * rvM.x; // 샘플 앞뒤 어긋남 (진행 방향 = (right.z, -right.x))
+  const latM = (p.pos.x - c.x) * rvM.x + (p.pos.z - c.z) * rvM.z;
   const lim = EDGE - 1.4;
-  if (Math.abs(p.lat) > lim) {
-    const s = Math.sign(p.lat);
-    p.pos.addScaledVector(rv, s * lim - p.lat); p.lat = s * lim;
+  const inMain = Math.abs(latM) <= lim && Math.abs(fwdOff) < 3 * T.segLen;
+  let k = 0, latS = 0, sd = Infinity;
+  if (T.sc) [k, latS, sd] = scNearest(T, p.pos);
+  const scLim = T.sc ? T.sc.half[k] + 0.6 : 0; // 지름길 반폭 (갈림길에서 넓음)
+  const inSc = !!T.sc && Math.abs(latS) <= scLim && sd < scLim + 3;
+  const wasSc = p.onSc;
+  p.onSc = inSc && !inMain; p.scK = k;
+  if (p.onSc && !wasSc) game.stats.scUsed = (game.stats.scUsed || 0) + 1; // 점검용: 지름길에 들어간 횟수
+  if (p.onSc) { // 지름길 위: 진행도는 지름길 비율만큼 본 도로 갈림점 사이로 옮김
+    p.idx = (T.sc.i0 + Math.round((k / (T.sc.n - 1)) * T.sc.span)) % N; p.idxF = p.idx; p.lat = latS;
+  } else {
+    p.idx = mi; p.idxF = (mi + clamp(fwdOff / T.segLen, -0.5, 0.5) + N) % N; p.lat = latM;
+  }
+  if (!inMain && !inSc) { // 길 밖: 더 가까운 쪽 길의 벽으로 밀어냄
+    const useSc = T.sc && sd < scLim + 14 && Math.abs(latS) - scLim < Math.abs(latM) - lim;
+    const rv = useSc ? T.sc.right[k] : rvM, lat = useSc ? latS : latM, L = useSc ? scLim : lim, s = Math.sign(lat);
+    p.pos.addScaledVector(rv, s * L - lat); p.lat = s * L;
+    if (useSc) { p.onSc = true; p.idx = (T.sc.i0 + Math.round((k / (T.sc.n - 1)) * T.sc.span)) % N; p.idxF = p.idx; } // 지름길 벽에 붙음
     const vn = (p.vel.x * rv.x + p.vel.z * rv.z) * s;
     if (vn > 0) {
       p.vel.x -= rv.x * s * vn * 1.35; p.vel.z -= rv.z * s * vn * 1.35;
@@ -92,22 +105,23 @@ function updatePlayer(dt) {
     }
     p.vel.multiplyScalar(Math.exp(-0.9 * dt));
   }
+  const rv = p.onSc ? T.sc.right[k] : rvM;
 
   // 구조: 가속 중인데 2.5초 넘게 거의 못 움직이면 도로 가운데 쪽으로 방향을 바로잡아 줌
   p.stuckT = gas && Math.abs(vF) < 3 ? (p.stuckT || 0) + dt : 0;
   if (p.stuckT > 2.5) {
-    p.stuckT = 0; p.h = T.head[p.idx]; p.yawRate = 0; p.vel.set(0, 0, 0);
+    p.stuckT = 0; p.h = p.onSc ? T.sc.head[k] : T.head[p.idx]; p.yawRate = 0; p.vel.set(0, 0, 0);
     p.pos.addScaledVector(rv, -p.lat * 0.6); p.lat *= 0.4;
     flash('다시 출발! 🚩', 'info'); Sound.sfx.hop();
   }
 
   // 높이: 점프대 끝에서 위로 튕겨줌
   for (const r of A.ramps) {
-    if (onGround && crossed(prev, p.idx, r.i1) && Math.abs(p.lat - r.lat) < r.w / 2 && vF > 8) {
+    if (onGround && !p.onSc && crossed(prev, p.idx, r.i1) && Math.abs(p.lat - r.lat) < r.w / 2 && vF > 8) {
       p.vy = 8 + r.h * 2 + vF * 0.08; p.canTrick = true; Sound.sfx.jump();
     }
   }
-  const impact = vertical(p, groundY(T, A, p.idxF, p.lat), dt);
+  const impact = vertical(p, p.onSc ? T.sc.pos[k].y : groundY(T, A, p.idxF, p.lat), dt);
   p.air = p.y - p.gy;
   if (p.air > 0.05) { p.airT += dt; if (p.airT > 0.35) p.canTrick = true; }
   if (impact) {
@@ -122,11 +136,11 @@ function updatePlayer(dt) {
 
   // 부스터 발판, 개울
   for (const pd of A.pads) {
-    if (onGround && p.padCd === 0 && inRange(p.idx, pd.i0 - 4, 8) && Math.abs(p.lat - pd.lat) < 5) {
+    if (onGround && !p.onSc && p.padCd === 0 && inRange(p.idx, pd.i0 - 4, 8) && Math.abs(p.lat - pd.lat) < 5) {
       p.boost = Math.max(p.boost, 1.1); p.padCd = 0.6; Sound.sfx.boost();
     }
   }
-  if (A.river && onGround && inRange(p.idx, A.river.i0 - A.river.n, 2 * A.river.n)) {
+  if (A.river && onGround && !p.onSc && inRange(p.idx, A.river.i0 - A.river.n, 2 * A.river.n)) {
     if (p.wet <= 0) Sound.sfx.splash();
     p.wet = 0.3;
     for (let k = 0; k < 3; k++) Particles.emit(kartPoint(p.kart, (Math.random() - 0.5) * 3, 0.3, -1), { color: 0xcfefff, vx: (Math.random() - 0.5) * 10, vy: 5 + Math.random() * 5, vz: (Math.random() - 0.5) * 10, life: 0.6, size: 0.7, grav: 22, alpha: 0.9 });
@@ -135,11 +149,11 @@ function updatePlayer(dt) {
   const dl = p.idx - prev;
   if (dl < -N / 2) p.laps++;
   else if (dl > N / 2) p.laps--;
-  for (const g of game.gates) if (crossed(prev, p.idx, g.i)) onPlayerGate(g);
+  if (!p.onSc) for (const g of game.gates) if (crossed(prev, p.idx, g.i)) onPlayerGate(g); // 지름길로 건너뛴 구간의 문은 지나간 것이 아님
 
   // 차체 움직임: 기울기, 들림, 미끄러지는 각도
   const accel = (vF - p.prevVF) / Math.max(dt, 1e-4); p.prevVF = vF;
-  p.roll = damp(p.roll, clamp(p.yawRate * vF * 0.004, -0.12, 0.12) - Math.atan(T.bank[p.idx]), 8, dt); // 기울어진 커브에서는 차도 기울어짐
+  p.roll = damp(p.roll, clamp(p.yawRate * vF * 0.004, -0.12, 0.12) - (p.onSc ? 0 : Math.atan(T.bank[p.idx])), 8, dt); // 기울어진 커브에서는 차도 기울어짐
   p.pitch = damp(p.pitch, clamp(-accel * 0.003, -0.07, 0.06), 6, dt);
   const slopeTarget = p.air > 0.3 ? -Math.atan(p.vy / Math.max(10, vF)) * 0.6 : -Math.atan(T.slope[p.idx]);
   p.slopeP = damp(p.slopeP, slopeTarget, 10, dt);
@@ -176,7 +190,7 @@ function playerEffects() {
     for (const x of [-0.32, 0.32]) Particles.emit(kartPoint(k, x, 0.8, -2.7), { color: Math.random() < 0.5 ? 0xff9f1c : 0xffe066, vx: p.vel.x * 0.85, vy: 0.5, vz: p.vel.z * 0.85, life: 0.18, size: 0.6, grow: -2, add: true });
   }
   if (p.spin > 0 && Math.random() < 0.5) Particles.emit(kartPoint(k, 0, 2.6, 0), { color: 0xffe135, vy: 3, life: 0.5, size: 0.4, add: true });
-  const surf = p.air < 0.05 ? game.T.surf[p.idx] : null;
+  const surf = p.air < 0.05 ? (p.onSc ? game.T.sc.surf : game.T.surf[p.idx]) : null;
   if ((surf === 'sand' || surf === 'mud') && Math.abs(p.vF) > 8 && Math.random() < 0.7) {
     for (const x of [-1.1, 1.1]) Particles.emit(kartPoint(k, x, 0.3, -1.5), { color: surf === 'mud' ? 0x6b4423 : 0xe0c08a, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 2, vz: (Math.random() - 0.5) * 4, life: 0.5, size: 0.7, grav: 8, alpha: 0.8 });
   }
