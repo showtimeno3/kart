@@ -97,9 +97,10 @@ function useItemFor(k, back = false) {
   if (!id) return;
   countUse(id, me);
   if (id === 'boost' || id === 'boost3') { k.boost = Math.max(k.boost, me ? 2 : 1.6); if (me) { flash('부스터! 🚀', 'info'); Sound.sfx.boost(); } }
-  else if (id === 'banana' || id === 'honey' || id === 'ice') dropHazard(id, k);
+  else if (id === 'banana' || id === 'honey') dropHazard(id, k);
+  else if (id === 'ice') dropHazard('ice', k, back ? 0 : 50); // 얼음 벽: 앞으로 던짐, ↓ 면 바로 뒤
   else if (id === 'shield') { k.shield = 8; if (me) { flash('방패! 🛡️', 'info'); Sound.sfx.shield(); } }
-  else if (id === 'balloon') throwShot('balloon', k, null);
+  else if (id === 'balloon') throwShot('balloon', k, null, back ? -1 : 1);
   else if (id === 'homing') throwShot('homing', k, kartAhead(k)[0]);
   else if (id === 'magnet') { k.magnet = 3; if (me) { flash('자석! 🧲', 'info'); Sound.sfx.magnet(); } }
   else if (id === 'bubble') {
@@ -130,9 +131,11 @@ function applyHint(g) {
 }
 
 // ---------- 바닥 함정 ----------
-function dropHazard(kind, k) {
+// ahead > 0 이면 그만큼 앞에 던져 놓음 (얼음 벽), 아니면 바로 뒤
+function dropHazard(kind, k, ahead = 0) {
   const { T, A } = game, cfg = HAZARD[kind];
-  const at = kartPoint(k.kart, 0, 0, kind === 'honey' ? -5.5 : -3.2);
+  const at = kartPoint(k.kart, 0, 0, ahead > 0 ? ahead : kind === 'honey' ? -5.5 : -3.2);
+  if (ahead > 0) keepOnRoad(at, k); // 커브에서 앞으로 던지면 도로 밖에 떨어질 수 있음
   const mesh = kind === 'banana' ? M.makeBanana() : kind === 'honey' ? M.honeyPuddle() : M.iceWall();
   if (onSc(k)) { // 지름길 위: 지름길 높이·방향
     const [kk] = scNearest(T, at);
@@ -147,26 +150,16 @@ function dropHazard(kind, k) {
   if (k === game.p) { if (kind === 'ice') Sound.sfx.ice(); else if (kind === 'honey') Sound.sfx.honey(); }
 }
 
-// ---------- 물풍선 ----------
-function throwShot(kind, k, target) {
-  const { T } = game, me = k === game.p, i = kartIdx(k);
-  // 플레이어가 비스듬히 던지면 옆으로도 날아가고 벽에 튕김 (도로 방향과 차 방향의 차이)
-  const sc = onSc(k) ? { s: scDist(k) + 4 } : null; // 지름길에서 던지면 지름길을 따라 날아감
-  const head = sc ? T.sc.head[clamp(Math.round(sc.s / T.sc.step), 0, T.sc.n - 1)] : T.head[i];
-  const latV = me ? clamp(SHOT_SPEED * Math.sin(head - game.p.h), -25, 25) : 0;
-  const mesh = M.waterBalloon(kind === 'homing' ? 0xff5a5a : 0x4fb3ff);
-  game.scene.add(mesh);
-  game.shots.push({ kind, mesh, owner: k, target, s: kartProg(k) + 4 / T.segLen, sc, lat: k.lat, latV, age: 0 });
-  if (me) { Sound.sfx.throw(); flash(kind === 'homing' ? '따라가는 물풍선! 🎯' : '물풍선! 🎈', 'info'); }
-}
-// 물풍선 명중: 실제 거리로 판정 (진행도·옆 위치로 하면 다른 길에 있는 카트가 맞을 수 있음)
-function shotHits(s, k) {
-  const p = s.mesh.position;
-  return Math.hypot(p.x - k.pos.x, p.z - k.pos.z) < 2.8 && Math.abs(k.y + 1.3 - p.y) < 3;
-}
-function splash(at) {
-  Particles.burst(at, 20, 0x8fd8ff, 9, { add: false, grav: 18, size: 0.7 });
-  if (game.p.pos.distanceTo(at) < 60) Sound.sfx.splat();
+// 점 at 이 도로(또는 지름길) 밖이면 도로 안쪽 가장자리로 옮김
+function keepOnRoad(at, k) {
+  const { T } = game;
+  if (onSc(k)) {
+    const [kk, lat] = scNearest(T, at), lim = T.sc.half[kk] - 2;
+    if (Math.abs(lat) > lim) at.copy(scPoint(T, kk, Math.sign(lat) * lim));
+  } else {
+    const i = nearest(T, at, kartIdx(k)), lat = (at.x - T.pos[i].x) * T.right[i].x + (at.z - T.pos[i].z) * T.right[i].z;
+    if (Math.abs(lat) > HW - 2) at.copy(roadPoint(T, i, Math.sign(lat) * (HW - 2)));
+  }
 }
 
 // ---------- 매 프레임 ----------
@@ -212,41 +205,7 @@ function updateItems(dt) {
     }
     if (gone) { scene.remove(h.mesh); hz.splice(n, 1); }
   }
-  // 물풍선
-  const sh = game.shots;
-  for (let n = sh.length - 1; n >= 0; n--) {
-    const s = sh[n];
-    s.age += dt;
-    const sc = T.sc;
-    if (s.sc) { // 지름길: 지름길 거리만큼 가면 본 도로 갈림점 사이 진행도만큼 셈, 끝나면 본 도로로
-      s.sc.s += SHOT_SPEED * dt; s.s += ((SHOT_SPEED * dt) / T.segLen) * ((sc.span * T.segLen) / sc.len);
-      if (s.sc.s >= sc.len) { s.sc = null; s.lat += sc.lat1; }
-    } else s.s += (SHOT_SPEED / T.segLen) * dt;
-    const kf = s.sc ? Math.min(s.sc.s / sc.step, sc.n - 1.001) : 0, k0 = Math.floor(kf);
-    const lim = (s.sc ? sc.half[k0] : HW) - 1;
-    if (s.kind === 'homing' && s.target && onSc(s.target) === !!s.sc) s.lat = approach(s.lat, s.target.lat, 14 * dt); // 같은 길에 있을 때만 따라감
-    else {
-      s.lat += s.latV * dt;
-      if (Math.abs(s.lat) > lim) { s.lat = Math.sign(s.lat) * lim; s.latV = -s.latV * 0.8; } // 벽에 튕김
-    }
-    if (s.sc) {
-      s.mesh.position.lerpVectors(sc.pos[k0], sc.pos[k0 + 1], kf - k0).addScaledVector(sc.right[k0], s.lat);
-      s.mesh.position.y = sc.pos[k0].y + 1.3 + Math.sin(s.age * 14) * 0.15;
-    } else {
-      const f = ((s.s % N) + N) % N, i0 = Math.floor(f), i1 = (i0 + 1) % N;
-      s.mesh.position.lerpVectors(T.pos[i0], T.pos[i1], f - i0).addScaledVector(T.right[i0], s.lat);
-      s.mesh.position.y = groundY(T, A, f, s.lat) + 1.3 + Math.sin(s.age * 14) * 0.15;
-    }
-    s.mesh.rotation.y += dt * 6;
-    let gone = s.age > (s.kind === 'homing' ? 6 : 4);
-    for (const k of karts) {
-      if (gone || k === s.owner || (s.kind === 'homing' && s.target && k !== s.target && s.age < 5)) continue;
-      if (shotHits(s, k)) {
-        hitKart(k, 'spin', '풍덩! 🎈'); gone = true;
-      }
-    }
-    if (gone) { splash(s.mesh.position.clone()); scene.remove(s.mesh); sh.splice(n, 1); }
-  }
+  updateShots(dt, karts); // js/shots.js
   if (racing) for (const a of game.ais) if (a.items.length) aiUseItems(a, dt);
 }
 

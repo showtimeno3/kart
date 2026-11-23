@@ -14,7 +14,7 @@ const ctx = vm.createContext({
   Particles: { burst: noop, emit: noop }, Sound: { sfx: new Proxy({}, { get: () => noop }) },
   M: {}, ItemTable: { ITEMS: {} }, $: () => ({}),
 });
-vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'items.js'), 'utf8'), ctx);
+for (const f of ['items.js', 'shots.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx);
 
 const kart = (o = {}) => Object.assign({ pos: { x: 0, z: 0 }, y: 0, lat: 0, d: 0, shield: 0, star: 0, spin: 0, slow: 0, finished: false, kart: {} }, o);
 function setup(...ais) {
@@ -86,5 +86,20 @@ function setup(...ais) {
   assert.deepStrictEqual([...a.items], ['hint']);
   ctx.useItemFor(a);
   assert.deepStrictEqual([...a.items], []);
+}
+// 뒤로 던지기: 물풍선이 뒤쪽에서 시작해 뒤로 감
+{
+  const fakeMesh = () => ({ position: { x: 0, y: 0, z: 0 }, rotation: { y: 0 } });
+  ctx.M.waterBalloon = fakeMesh;
+  const k = kart({ d: 500, lat: 3 });
+  setup(k);
+  Object.assign(ctx.game, { shots: [], scene: { add: noop, remove: noop }, T: { segLen: 1.7, sc: null, head: new Array(1600).fill(0) } });
+  ctx.throwShot('balloon', k, null, -1);
+  const s = ctx.game.shots[0];
+  assert.strictEqual(s.dir, -1);
+  assert.ok(s.s < 500, '뒤로 던졌는데 앞에서 시작');
+  ctx.throwShot('balloon', k, null);
+  assert.strictEqual(ctx.game.shots[1].dir, 1);
+  assert.ok(ctx.game.shots[1].s > 500);
 }
 console.log('items-hit: all tests passed');
