@@ -21,6 +21,14 @@ for (const n of RESTRICTED) {
   try { new vm.Script(`${joined}\n;let ${n};`); } catch (e) { assert.fail(`window 의 '${n}' 과 같은 이름을 최상위에서 선언함`); }
 }
 
+// 같은 이름의 function 선언은 이어 붙여도 문법 오류가 아니라서(뒤 파일이 조용히 덮어씀) 따로 검사
+const fnOwner = {};
+files.forEach((f, k) => {
+  for (const m of sources[k].matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)) {
+    assert.ok(!fnOwner[m[1]], `function ${m[1]} 이 ${fnOwner[m[1]]} 와 ${f} 에 둘 다 있음`);
+    fnOwner[m[1]] = f;
+  }
+});
 files.forEach((f, k) => {
   const lines = sources[k].split('\n').length;
   assert.ok(lines <= 600, `${f} 가 ${lines}줄 (600줄 이하로 나눌 것)`);
