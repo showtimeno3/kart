@@ -71,5 +71,10 @@ TRACKS.forEach((def, t) => {
   for (const u of def.gates) assert.ok(!inSpan(u, sc.from, sc.to), `${name} 건너뛰는 구간에 문 u=${u}`);
   // 지름길에서 나오자마자 문이 있으면 문제를 읽고 차선을 고를 시간이 없음: 출구에서 다음 문까지 100 이상
   for (const u of def.gates) { const after = ((((u - sc.to) % 1) + 1) % 1) * S.L; assert.ok(after >= 100, `${name} 지름길 출구 바로 뒤에 문 u=${u} (${Math.round(after)})`); }
+  // 점프대에서 뜬 채(또는 착지 직후) 문을 지나면 답이 점프대 쪽 차선으로 정해짐: 점프대 끝에서 다음 문까지 80 이상 (원래 초원 0.845→0.88 이 86)
+  for (const r of def.ramps) {
+    const rampEnd = r[0] + r[4] / S.L, next = Math.min(...def.gates.map((u) => (((u - rampEnd) % 1) + 1) % 1)) * S.L;
+    assert.ok(next >= 80, `${name} 점프대 u=${r[0]} 바로 뒤에 문 (${Math.round(next)})`);
+  }
 });
 console.log(`tracks: all tests passed (${TRACKS.length} tracks)`);
