@@ -84,8 +84,8 @@ function startRace() {
   const boxes = [];
   for (const u of def.items) {
     const i = uIdx(u);
-    const goldAt = Math.floor(Math.random() * 4); // 줄마다 1개는 금색
-    [-15, -5, 5, 15].forEach((lat, n) => {
+    const goldAt = Math.floor(Math.random() * 6); // 줄마다 1개는 금색
+    [-16, -9.6, -3.2, 3.2, 9.6, 16].forEach((lat, n) => { // 8대가 달리니 한 줄에 6개
       const gold = n === goldAt, m = new THREE.Mesh(boxGeo, gold ? goldMat : boxMat);
       const base = roadPoint(T, i, lat, 2);
       m.position.copy(base); m.castShadow = true; scene.add(m);
@@ -95,21 +95,22 @@ function startRace() {
 
   // 플레이어 & 컴퓨터 (플레이어는 맨 뒤에서 출발)
   const pk = M.makeKart(settings.species); scene.add(pk.root);
-  const p = { kart: pk, pos: roadPoint(T, 8, 9), vel: new THREE.Vector3(), h: T.head[8], yawRate: 0, steer: 0, vF: 0, prevVF: 0,
-    idx: 8, idxF: 8, lat: 9, laps: 0, drift: { on: false, dir: 0, charge: 0 }, boost: 0, slow: 0, spin: 0, spinA: 0,
-    y: T.pos[8].y, vy: 0, gy: T.pos[8].y, air: 0, airT: 0, land: 0, hopCd: 0, canTrick: false, trick: 0, tricked: false,
+  const startY = (i, lat) => groundY(T, A, i, lat); // 출발 칸의 실제 도로 높이 (커브 기울기 포함) — 시작하자마자 튀지 않게
+  const p = { kart: pk, pos: roadPoint(T, 8, 8), vel: new THREE.Vector3(), h: T.head[8], yawRate: 0, steer: 0, vF: 0, prevVF: 0,
+    idx: 8, idxF: 8, lat: 8, laps: 0, drift: { on: false, dir: 0, charge: 0 }, boost: 0, slow: 0, spin: 0, spinA: 0,
+    y: startY(8, 8), vy: 0, gy: startY(8, 8), air: 0, airT: 0, land: 0, hopCd: 0, canTrick: false, trick: 0, tricked: false,
     roll: 0, pitch: 0, slopeP: 0, bodyYaw: 0, wheel: 0, shake: 0, padCd: 0, wet: 0,
     rolling: 0, rollTick: 0, combo: 0, finished: false, finishTime: 0, rank: AI_COUNT + 1, gasAt: -99 };
   resetEffects(p);
   const others = SPECIES_KEYS.filter((s) => s !== settings.species);
-  const grid = [[62, -9], [62, 9], [44, -9], [44, 9], [26, -9], [26, 9], [8, -9]]; // 2줄 × 4, 플레이어는 마지막 줄 오른쪽 [8, 9]
+  const grid = [[26, -8], [26, 8], [20, -8], [20, 8], [14, -8], [14, 8], [8, -8]]; // 2줄 × 4 (줄 간격 약 10), 플레이어는 마지막 줄 오른쪽 [8, 8]
   const PERSONAS = ['aggro', 'steady', 'prank']; // 공격형, 안정형, 장난꾸러기
   const ais = grid.slice(0, AI_COUNT).map(([i, lat], k) => {
     const kart = M.makeKart(others[k]); scene.add(kart.root);
     return { kart, species: others[k], name: M.SPECIES[others[k]].name, color: M.SPECIES[others[k]].kart, d: i * T.segLen, idx: i, lat, latT: lat, latV: 0, speed: 0,
       persona: PERSONAS[k % 3], base: (33 + k * 0.6 + Math.random() * 2 + (k % 3 === 0 ? 0.6 : 0)) * DIFF.speed, skill: DIFF.skill + Math.random() * 0.12 + (k % 3 === 1 ? 0.08 : 0),
       boost: 0, slow: 0, spin: 0, banana: 12 + Math.random() * 14, finished: false, finishTime: 0,
-      roll: 0, bodyYaw: 0, wheel: 0, planGate: null, planLane: -1, pos: new THREE.Vector3(), y: T.pos[i].y, vy: 0, gy: T.pos[i].y, padCd: 0 };
+      roll: 0, bodyYaw: 0, wheel: 0, planGate: null, planLane: -1, pos: roadPoint(T, i, lat).setY(startY(i, lat)), y: startY(i, lat), vy: 0, gy: startY(i, lat), padCd: 0 }; // 인트로 때부터 제자리에 보이게
   });
   ais.forEach(resetEffects);
 
