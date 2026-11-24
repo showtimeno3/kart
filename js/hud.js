@@ -93,7 +93,7 @@ function updateHUD(dt) {
       game.lastCount = n; cd.textContent = n; cd.classList.remove('tick'); void cd.offsetWidth; cd.classList.add('tick'); Sound.sfx.beep();
       lights.className = ''; lights.querySelectorAll('i').forEach((el, k) => el.classList.toggle('red', k < 4 - n));
     }
-  } else if (game.t < 1.2) {
+  } else if (game.t < QUESTION_DELAY) {
     if (game.lastCount !== 0) {
       game.lastCount = 0; cd.textContent = '출발!'; cd.classList.remove('tick'); void cd.offsetWidth; cd.classList.add('tick');
       lights.className = 'go'; lights.querySelectorAll('i').forEach((el) => el.classList.remove('red'));

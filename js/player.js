@@ -172,7 +172,7 @@ function updatePlayer(dt) {
     $('question').classList.add('hidden');
     if (d.on) endDrift(false);
   }
-  if (!p.finished && game.state === 'race') updateNextGate();
+  if (!p.finished && game.state === 'race' && game.t >= QUESTION_DELAY) updateNextGate();
 }
 
 function playerEffects() {

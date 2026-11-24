@@ -31,7 +31,7 @@ function step(dt) {
   }
   game.t += dt;
   if (game.state === 'countdown' && game.t >= 0) {
-    game.state = 'race'; updateNextGate(); Sound.sfx.go();
+    game.state = 'race'; Sound.sfx.go(); // 문제 카드는 신호등이 사라진 뒤(QUESTION_DELAY)부터
     const p = game.p; // 스타트 대시: 출발 직전(1초 안)에 가속을 누르기 시작하면 부스터
     if ((keys.up || touchMode) && p.gasAt > -1.0) { p.boost = 1.2; flash('스타트 대시!', 'info'); Sound.sfx.boost(); }
   }

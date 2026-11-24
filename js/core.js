@@ -3,6 +3,8 @@
 'use strict';
 
 const M = window.Models;
+// 출발 후 문제 카드가 나오기까지(초): 출발 신호등·"출발!" 글자가 사라진 뒤
+const QUESTION_DELAY = 1.2;
 const LAPS = 3, N = 1600, HW = 20, LANE = 12, EDGE = HW + 5.2, AI_COUNT = 7;
 const MAX_SPEED = 38, BOOST_MUL = 1.4, G = 30, KMH = 3.2;
 const LANE_COLORS = ['#e74c3c', '#2e86de', '#1e8449'];
