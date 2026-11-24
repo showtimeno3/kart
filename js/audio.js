@@ -4,7 +4,8 @@
 
 // ---------- 소리 (WebAudio 합성, 파일 없음): 효과음 / 음악 버스를 따로 두어 음량을 따로 조절 ----------
 const Sound = (() => {
-  let ctx = null, master = null, sfxBus = null, musicBus = null, eng = null, muted = false;
+  let ctx = null, master = null, sfxBus = null, musicBus = null, eng = null, muted = false, loopBus = null, noiseBuf = null;
+  const loops = new Set(); // 지금 나고 있는 계속 소리들
   try { muted = localStorage.getItem('eduKart.muted') === '1'; } catch (e) { /* 무시 */ }
   function levels() {
     if (!ctx) return;
@@ -21,6 +22,7 @@ const Sound = (() => {
     // 큰 소리가 겹쳐도 찢어지지 않게 압축
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(master);
     sfxBus = ctx.createGain(); sfxBus.connect(comp); musicBus = ctx.createGain(); musicBus.connect(comp);
+    loopBus = ctx.createGain(); loopBus.connect(sfxBus); // 날아가는 아이템 소리 (일시정지·메뉴에서 끔)
     levels();
     const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     o1.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 500; g.gain.value = 0;
@@ -86,8 +88,44 @@ const Sound = (() => {
     warn() { tone(1046, 0.08, 'square', 0.09); },
     finish() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.3, 'triangle', 0.22, i * 0.12)); },
   };
+  // 날아가는 아이템이 계속 내는 소리. set(크기 0~1, 좌우 -1~1) 로 매 프레임 바꾸고, 사라지면 stop()
+  const LOOP = { // 종류별: 소리 재료, 거름 주파수, 떨림(초당), 최대 크기
+    bee: { saw: [175, 182], freq: 1200, wob: 22, vol: 0.5 },
+    tornado: { noise: true, freq: 450, sweep: 0.7, vol: 0.45 },
+    boomerang: { noise: true, freq: 1800, wob: 9, vol: 0.35 },
+    balloon: { noise: true, freq: 1300, vol: 0.18 },
+    homing: { noise: true, freq: 1300, vol: 0.2 },
+  };
+  function loop(kind) {
+    const L = LOOP[kind];
+    if (!ctx || !L) return null;
+    const t = ctx.currentTime, srcs = [];
+    const f = ctx.createBiquadFilter(), amp = ctx.createGain(), g = ctx.createGain(), pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    f.type = L.noise ? 'bandpass' : 'lowpass'; f.frequency.value = L.freq; g.gain.value = 0;
+    if (L.noise) {
+      if (!noiseBuf) { noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+      const n = ctx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; n.connect(f); srcs.push(n);
+    } else for (const hz of L.saw) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz; o.connect(f); srcs.push(o); }
+    if (L.wob) { const lfo = ctx.createOscillator(), depth = ctx.createGain(); lfo.frequency.value = L.wob; depth.gain.value = 0.5; amp.gain.value = 0.5; lfo.connect(depth); depth.connect(amp.gain); srcs.push(lfo); }
+    if (L.sweep) { const lfo = ctx.createOscillator(), depth = ctx.createGain(); lfo.frequency.value = L.sweep; depth.gain.value = 250; lfo.connect(depth); depth.connect(f.frequency); srcs.push(lfo); }
+    f.connect(amp); amp.connect(g);
+    if (pan) { g.connect(pan); pan.connect(loopBus); } else g.connect(loopBus);
+    srcs.forEach((s) => s.start(t));
+    const h = {
+      set(v, p) { const now = ctx.currentTime; g.gain.setTargetAtTime(v * L.vol, now, 0.05); if (pan) pan.pan.setTargetAtTime(p, now, 0.05); },
+      stop() {
+        if (!loops.delete(h)) return;
+        const now = ctx.currentTime; g.gain.setTargetAtTime(0, now, 0.05);
+        srcs.forEach((s) => s.stop(now + 0.3));
+      },
+    };
+    loops.add(h);
+    return h;
+  }
+  const loopsOn = (on) => { if (loopBus) loopBus.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.05); };
+  const stopLoops = () => { for (const h of [...loops]) h.stop(); };
   return {
-    init, engine, sfx, levels,
+    init, engine, sfx, levels, loop, loopsOn, stopLoops,
     get engineLevel() { return eng ? eng.g.gain.value : 0; }, // 점검용
     get muted() { return muted; },
     toggle() {

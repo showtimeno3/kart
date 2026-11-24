@@ -5,7 +5,7 @@
 function startRace() {
   const def = TRACKS[settings.track];
   saveSettings();
-  Sound.init();
+  Sound.init(); Sound.stopLoops(); Sound.loopsOn(true); // 앞 경주에서 날던 아이템 소리 정리
   const DIFF = [{ speed: 0.97, skill: 0.55 }, { speed: 1.07, skill: 0.73 }, { speed: 1.13, skill: 0.9 }][settings.difficulty] || { speed: 1.07, skill: 0.73 }; // 쉬움, 보통, 어려움
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(def.fog || def.skyBottom, 320, 1700);

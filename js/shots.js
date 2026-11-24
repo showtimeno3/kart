@@ -9,6 +9,15 @@ const SHOT = { // 종류별 속도(초당 거리), 수명(초), 맞혔을 때 �
   tornado: { speed: 45, life: 6, msg: '빙글빙글! 🌀' },
   boomerang: { speed: 70, life: 4, msg: '딱! 🪃' },
 };
+// 소리가 들리는 거리: 가까울수록 크게, 이 거리 밖이면 안 들림
+const HEAR = { bee: 120, tornado: 90, boomerang: 80, balloon: 60, homing: 60 };
+// 날아가는 아이템 소리 크기(0~1)와 좌우(-1 왼쪽 ~ +1 오른쪽). you: 듣는 카트(플레이어)
+function shotSound(s, you) {
+  const p = s.mesh.position, dx = p.x - you.pos.x, dz = p.z - you.pos.z, d = Math.hypot(dx, dz), R = HEAR[s.kind];
+  const v = d >= R ? 0 : (1 - d / R) ** 2;
+  const rx = -Math.cos(you.h), rz = Math.sin(you.h); // 카트 오른쪽 방향
+  return [v, d > 0.01 ? clamp((dx * rx + dz * rz) / d, -1, 1) : 0];
+}
 const BOOMERANG_OUT = 1.5; // 부메랑이 앞으로 날아가는 시간(초), 그 뒤 돌아옴
 const BEE_ALT = 10, BEE_DIVE = 60, BEE_AREA = 10; // 벌떼: 날아가는 높이, 이 거리 안이면 1등에게 내리꽂음, 맞힐 때 1등 주변 범위
 
@@ -29,7 +38,7 @@ function throwShot(kind, k, target, dir = 1) {
   const mesh = kind === 'bee' ? M.bees() : kind === 'tornado' ? M.tornado() : kind === 'boomerang' ? M.boomerang() : M.waterBalloon(kind === 'homing' ? 0xff5a5a : 0x4fb3ff);
   game.scene.add(mesh);
   game.shots.push({ kind, mesh, owner: k, target, dir, s: kartProg(k) + (4 * dir) / T.segLen, sc, lat: k.lat, latV, age: 0,
-    phase: 'out', hitSet: new Set(), gone: false });
+    phase: 'out', hitSet: new Set(), gone: false, snd: Sound.loop(kind) }); // 날아가는 동안 계속 나는 소리
   if (me) { // 다른 플레이어는 날아가는 모습으로 알고, 노림을 받는 1등은 경고로 앎
     const say = { homing: '따라가는 물풍선! 🎯', bee: '벌떼 출동! 🐝', tornado: '회오리! 🌀', boomerang: '부메랑! 🪃' }[kind] || (dir < 0 ? '뒤로 물풍선! 🎈' : '물풍선! 🎈');
     flash(say, 'info');
@@ -161,6 +170,7 @@ function updateShots(dt, karts) {
       for (const k of karts) if (!s.gone) shotTryHit(s, k);
       if (s.kind === 'boomerang' && s.phase === 'back' && shotHits(s, s.owner, 3)) s.gone = true; // 던진 카트에게 돌아옴
     }
-    if (s.gone || s.age > SHOT[s.kind].life) { splash(s); game.scene.remove(s.mesh); sh.splice(n, 1); }
+    if (s.snd) s.snd.set(...shotSound(s, game.p)); // 다가오면 커지고 지나가면 작아짐
+    if (s.gone || s.age > SHOT[s.kind].life) { splash(s); if (s.snd) s.snd.stop(); game.scene.remove(s.mesh); sh.splice(n, 1); }
   }
 }

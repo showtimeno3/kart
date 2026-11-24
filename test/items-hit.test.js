@@ -11,7 +11,7 @@ const ctx = vm.createContext({
   N: 1600, HW: 20, EDGE: 25.2,
   aiTotal: (a) => a.d, kartPoint: () => ({}), flash: noop, endDrift: noop, showBanner: noop,
   clamp: (v, a, b) => Math.max(a, Math.min(b, v)), approach: (a, b) => b,
-  Particles: { burst: noop, emit: noop }, Sound: { sfx: new Proxy({}, { get: () => noop }) },
+  Particles: { burst: noop, emit: noop }, Sound: { sfx: new Proxy({}, { get: () => noop }), loop: () => null },
   M: {}, ItemTable: { ITEMS: new Proxy({}, { get: () => ({ icon: '?' }) }) }, $: () => ({ classList: { toggle: noop } }),
 });
 for (const f of ['items.js', 'shots.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx);
@@ -237,5 +237,16 @@ function setup(...ais) {
   ctx.throwShot('bee', owner, lead2);
   for (let k = 0; k < 600; k++) ctx.updateShots(0.05, [owner, lead2]);
   assert.strictEqual(ctx.game.shots.length, 1, '벌떼가 시간 제한으로 사라짐');
+}
+// 날아가는 아이템 소리: 가까울수록 크고, 들리는 거리 밖이면 0, 오른쪽에 있으면 오른쪽(+)
+{
+  const you = { pos: { x: 0, z: 0 }, h: 0 }; // h=0: 앞 = +z, 오른쪽 = -x
+  const at = (x, z) => ({ kind: 'bee', mesh: { position: { x, y: 10, z } } });
+  const [v1] = ctx.shotSound(at(0, -20), you), [v2] = ctx.shotSound(at(0, -80), you), [v3] = ctx.shotSound(at(0, -200), you);
+  assert.ok(v1 > v2 && v2 > 0, '가까운 벌떼가 더 크게 안 들림');
+  assert.strictEqual(v3, 0, '들리는 거리 밖에서 들림');
+  assert.ok(ctx.shotSound(at(-30, 0), you)[1] > 0.5, '오른쪽 벌떼가 오른쪽에서 안 들림');
+  assert.ok(ctx.shotSound(at(30, 0), you)[1] < -0.5);
+  assert.ok(ctx.shotSound({ kind: 'balloon', mesh: { position: { x: 0, y: 1, z: -70 } } }, you)[0] === 0, '물풍선은 60 밖이면 안 들림');
 }
 console.log('items-hit: all tests passed');

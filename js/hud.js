@@ -121,6 +121,7 @@ function updateHUD(dt) {
 }
 
 function showResult() {
+  Sound.stopLoops();
   const { p, stats, ais, T } = game;
   game.state = 'done';
   Sound.engine(0, false);

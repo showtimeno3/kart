@@ -81,6 +81,7 @@ function togglePause() {
   if (!game.paused) $('settings').classList.add('hidden');
   for (const k in keys) keys[k] = false;
   if (window.Music) Music.pause(game.paused);
+  Sound.loopsOn(!game.paused); // 날아가는 아이템 소리도 멈춤
   if (game.paused) Sound.engine(0, false); // 멈춘 동안은 매 프레임 갱신이 없어서 여기서 꺼야 함
   if (window.speechSynthesis && game.paused) speechSynthesis.cancel();
 }
@@ -101,7 +102,7 @@ function goMenu() {
   ['result', 'pause', 'settings', 'hud', 'touch'].forEach((id) => $(id).classList.add('hidden'));
   $('menu').classList.remove('hidden'); $('speedlines').style.opacity = 0;
   game = null; showcase.setSpecies(settings.species); refreshMenu();
-  Sound.engine(0, false); // 메뉴에서는 엔진 소리 끔
+  Sound.engine(0, false); Sound.stopLoops(); // 메뉴에서는 엔진·날아가는 아이템 소리 끔
   if (bloomPass) bloomPass.strength = 0.22;
   if (window.Music) Music.play('menu');
 }
