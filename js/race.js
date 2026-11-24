@@ -103,8 +103,9 @@ function startRace() {
     rolling: 0, rollTick: 0, combo: 0, finished: false, finishTime: 0, rank: AI_COUNT + 1, gasAt: -99 };
   resetEffects(p);
   const others = SPECIES_KEYS.filter((s) => s !== settings.species);
-  // 2열 엇갈림: 같은 열 앞차와 24 샘플(약 40) 간격, 왼쪽 열은 반 칸(12) 앞 — 스타트 대시를 써도 바로 앞차에 걸리지 않게. 플레이어는 오른쪽 열 맨 뒤 [8, 8]
-  const grid = [[92, -8], [80, 8], [68, -8], [56, 8], [44, -8], [32, 8], [20, -8]];
+  // 2열 엇갈림: 같은 열 앞차와 거리 30, 왼쪽 열은 반 칸(15) 앞 — 스타트 대시를 써도 바로 앞차에 걸리지 않게. 플레이어는 오른쪽 열 맨 뒤 [8, 8]
+  const GRID_GAP = 30, half = GRID_GAP / 2 / T.segLen; // 트랙마다 샘플 길이가 달라서 거리로 계산
+  const grid = [7, 6, 5, 4, 3, 2, 1].map((n) => [Math.round(8 + n * half), n % 2 ? -8 : 8]); // 앞줄부터
   const PERSONAS = ['aggro', 'steady', 'prank']; // 공격형, 안정형, 장난꾸러기
   const ais = grid.slice(0, AI_COUNT).map(([i, lat], k) => {
     const kart = M.makeKart(others[k]); scene.add(kart.root);
